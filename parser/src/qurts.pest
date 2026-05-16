@@ -1,0 +1,40 @@
+WHITESPACE = _{ " " | "\t" | "\n" | "\r\n" }
+
+program = _{ SOI ~ function* ~ EOI  }
+
+function = { "fn" ~ function_name ~ signature ~ block }
+function_name = _{ ident }
+
+signature  = { lifetime_preorder? ~ "(" ~ param_list ~ ")" ~ "->" ~ ty }
+param_list = { (param ~ ("," ~ param)*)? }
+param      = { ident ~ ":" ~ ty }
+
+// TODO: Implement block
+block = { "{" ~ "}" }
+
+// TODO: Implement stmt
+// stmt = {}
+
+// TODO: Implement expr
+// expr = {}
+
+ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+
+// Lifetime: α | ⊥ | ⊤
+lifetime        =  { "'" ~ (lifetime_empty | lifetime_static | lifetime_var) }
+lifetime_var    = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+lifetime_empty  =  { "0" }
+lifetime_static =  { "static" }
+
+// Type: bool | qbit | () | T1 * T2 | &^a T | #^a T
+ty           =  { ref_ty | unique_ty | product_ty | unit_ty | bool_ty | qbit_ty }
+bool_ty      =  { "bool" }
+qbit_ty      =  { "qbit" }
+unit_ty      =  { "()" }
+product_ty   =  { "(" ~ ty ~ "*" ~ ty ~ ")" }
+ref_ty       =  { "&^" ~ lifetime ~ ty }
+unique_ty    =  { "#^" ~ lifetime ~ ty }
+
+lifetime_preorder      = { "<" ~ (lifetime_preorder_item ~ ("," ~ lifetime_preorder_item)*)? ~ ">" }
+lifetime_preorder_item = { ordering_constraint | lifetime }
+ordering_constraint    = { lifetime ~ ("==" | "<=" | ">=" | "!=" | ">" | "<") ~ lifetime }
