@@ -31,7 +31,7 @@ ty           =  { ref_ty | unique_ty | product_ty | unit_ty | bool_ty | qbit_ty 
 bool_ty      =  { "bool" }
 qbit_ty      =  { "qbit" }
 unit_ty      =  { "()" }
-product_ty   =  { "(" ~ ty ~ "*" ~ ty ~ ")" }
+product_ty   =  { "(" ~ ty ~ "," ~ ty ~ ")" }
 ref_ty       =  { "&^" ~ lifetime ~ ty }
 unique_ty    =  { "#^" ~ lifetime ~ ty }
 
