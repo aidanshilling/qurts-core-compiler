@@ -44,6 +44,12 @@ qlt + qss MLIR dialects
 target quantum circuit dialect (e.g. Catalyst, QIR)
 ```
 
+## AI assistance
+
+Parts of this project were developed with the assistance of Claude (Anthropic). Usage is primarily restricted to brainstorming and proofreading. All generated
+code and design suggestions have been reviewed by the project author. All AI usage is in line
+with the University of Edinburgh's current [generative AI policy & assement regulations](https://registryservices.ed.ac.uk/academic-services/policies-regulations/regulations).
+
 ## Building
 
 The `parser` crate has no system dependencies. The `qlt` and `qss` crates depend on
