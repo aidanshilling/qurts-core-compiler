@@ -10,15 +10,15 @@ have been ended by the time the value is consumed.
 ## Planned contents
 
 **Types**
-- `!qss.qbit` — quantum bit; a linear type that cannot be copied (no-cloning theorem)
-- `!qss.unique<lt, T>` — unique reference `#'a T`; consumed exactly once
-- `!qss.ref<lt, T>` — shared reference `&'a T`; classically borrowed
+- `!qss.qbit` - quantum bit; a linear type that cannot be copied (no-cloning theorem)
+- `!qss.unique<lt, T>` - unique reference `#'a T`; consumed exactly once
+- `!qss.ref<lt, T>` - shared reference `&'a T`; classically borrowed
 
 **Ops**
-- `qss.borrow` — creates a `!qss.ref` from a value and a lifetime token
-- `qss.unique_borrow` — creates a `!qss.unique` from a value and a lifetime token
-- `qss.release` — consumes a `!qss.unique`, discharging the ownership obligation
-- `qss.uncompute` — marks the point at which a qbit must have been returned to |0⟩;
+- `qss.borrow` - creates a `!qss.ref` from a value and a lifetime token
+- `qss.unique_borrow` - creates a `!qss.unique` from a value and a lifetime token
+- `qss.release` - consumes a `!qss.unique`, discharging the ownership obligation
+- `qss.uncompute` - marks the point at which a qbit must have been returned to |0>;
   lowered to an inverse gate sequence by the uncomputation pass
 
 ## Uncomputation lowering
@@ -29,5 +29,5 @@ emitting them into the target quantum circuit dialect (e.g. Catalyst, QIR).
 
 ## Dependencies
 
-- `qlt` (path dependency) — lifetime tokens used in `!qss.unique` and `!qss.ref` type parameters
+- `qlt` (path dependency) - lifetime tokens used in `!qss.unique` and `!qss.ref` type parameters
 - [melior](https://github.com/raviqqe/melior)
