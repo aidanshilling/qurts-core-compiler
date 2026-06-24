@@ -15,6 +15,9 @@ block = { "{" ~ stmt* ~ expr? ~ "}" }
 stmt      = { let_stmt | expr_stmt }
 let_stmt  = { "let" ~ ident ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
 expr_stmt = { expr ~ ";" }
+// TODO: drop_stmt   - explicit drop: `drop x;`
+// TODO: endlft_stmt - lifetime end:  `endlft 'a;`
+// TODO: newlft_stmt - lifetime intro: `newlft 'a;`
 
 // Expression hierarchy (lowest to highest precedence)
 expr       =  { expr_or }
@@ -37,6 +40,10 @@ expr_atom = {
   | call_expr
   | ident
   | "(" ~ expr ~ ")"
+  // TODO: qif_expr    - quantum conditional: `qif r { ... } else { ... }` where r: &'a qbit
+  // TODO: qstate_expr - quantum state literals: |0> and |1>
+  // TODO: lift_expr   - classical function lifting: `[f](args)`
+  // TODO: cast_expr   - type coercion: `x as #'a qbit`
 }
 
 lit_bool   =  { "true" | "false" }
@@ -55,6 +62,7 @@ lifetime_empty  =  { "0" }
 lifetime_static =  { "static" }
 
 // Type: bool | qbit | () | T1 * T2 | &^a T | #^a T
+// TODO: mut_ref_ty - mutable reference type: `&mut T`
 ty           =  { ref_ty | unique_ty | product_ty | unit_ty | bool_ty | qbit_ty }
 bool_ty      =  { "bool" }
 qbit_ty      =  { "qbit" }
