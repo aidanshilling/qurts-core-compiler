@@ -2,6 +2,7 @@ WHITESPACE = _{ " " | "\t" | "\n" | "\r\n" }
 
 program = _{ SOI ~ function* ~ EOI  }
 
+// Functions contain their local lifetime, plus the lifetime of all callers
 function = { "fn" ~ function_name ~ signature ~ block }
 function_name = _{ ident }
 
@@ -9,14 +10,41 @@ signature  = { lifetime_preorder? ~ "(" ~ param_list ~ ")" ~ "->" ~ ty }
 param_list = { (param ~ ("," ~ param)*)? }
 param      = { ident ~ ":" ~ ty }
 
-// TODO: Implement block
-block = { "{" ~ "}" }
+block = { "{" ~ stmt* ~ expr? ~ "}" }
 
-// TODO: Implement stmt
-// stmt = {}
+stmt      = { let_stmt | expr_stmt }
+let_stmt  = { "let" ~ ident ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
+expr_stmt = { expr ~ ";" }
 
-// TODO: Implement expr
-// expr = {}
+// Expression hierarchy (lowest to highest precedence)
+expr       =  { expr_or }
+expr_or    =  { expr_and   ~ ("||"    ~ expr_and)* }
+expr_and   =  { expr_eq    ~ ("&&"    ~ expr_eq)* }
+expr_eq    =  { expr_unary ~ (eq_op   ~ expr_unary)? }
+eq_op      =  { "==" | "!=" }
+expr_unary =  { unary_op ~ expr_unary | borrow_expr | unique_expr | expr_atom }
+unary_op   =  { "!" | "*" }
+
+borrow_expr = { "&" ~ lifetime ~ expr_unary }
+unique_expr = { "#" ~ lifetime ~ expr_unary }
+
+expr_atom = {
+    if_expr
+  | block
+  | lit_bool
+  | lit_unit
+  | tuple_expr
+  | call_expr
+  | ident
+  | "(" ~ expr ~ ")"
+}
+
+lit_bool   =  { "true" | "false" }
+lit_unit   =  { "()" }
+tuple_expr =  { "(" ~ expr ~ "," ~ expr ~ ")" }
+call_expr  =  { ident ~ "(" ~ arg_list ~ ")" }
+arg_list   =  { (expr ~ ("," ~ expr)*)? }
+if_expr    =  { "if" ~ expr ~ block ~ ("else" ~ block)? }
 
 ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
@@ -32,9 +60,10 @@ bool_ty      =  { "bool" }
 qbit_ty      =  { "qbit" }
 unit_ty      =  { "()" }
 product_ty   =  { "(" ~ ty ~ "," ~ ty ~ ")" }
-ref_ty       =  { "&^" ~ lifetime ~ ty }
-unique_ty    =  { "#^" ~ lifetime ~ ty }
+ref_ty       =  { "&" ~ lifetime ~ ty }
+unique_ty    =  { "#" ~ lifetime ~ ty }
 
+// Add | for lifetime separation
 lifetime_preorder      = { "<" ~ (lifetime_preorder_item ~ ("," ~ lifetime_preorder_item)*)? ~ ">" }
 lifetime_preorder_item = { ordering_constraint | lifetime }
-ordering_constraint    = { lifetime ~ ("==" | "<=" | ">=" | "!=" | ">" | "<") ~ lifetime }
+ordering_constraint    = { lifetime ~ ("<=" | "!=") ~ lifetime }
