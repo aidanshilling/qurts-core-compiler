@@ -11,11 +11,12 @@ have been ended by the time the value is consumed.
 
 **Types**
 - `!qss.qbit` - quantum bit; a linear type that cannot be copied (no-cloning theorem)
-- `!qss.unique<lt, T>` - unique reference `#'a T`; consumed exactly once
+- `!qss.unique<lt, T>` - unique reference `#'a T`; consumed exactly once (for qubits you own)
 - `!qss.ref<lt, T>` - shared reference `&'a T`; classically borrowed. When `T` is `!qss.qbit`,
-  the reference is only valid as the control qubit in a `qif` — it cannot be used for arbitrary
+  the reference is only valid as the control qubit in a `qif` (for qubits you dont own but need to be alive) — it cannot be used for arbitrary
   gate application. Its primary role is to express that a qubit must remain alive for lifetime `lt`
-  so that other qubits entangled with it can be uncomputed. This is something we probably want the verifier to handle.
+  so that other qubits entangled with it can be uncomputed. This is something we probably want the verifier to handle. 
+  We can use to statically confirm uncomputation ordering.
 
 **Ops**
 - `qss.borrow` - creates a `!qss.ref` from a value and a lifetime token
