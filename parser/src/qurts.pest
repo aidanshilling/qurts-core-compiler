@@ -12,26 +12,17 @@ param      = { ident ~ ":" ~ ty }
 
 block = { "{" ~ stmt* ~ expr? ~ "}" }
 
-stmt      = { let_stmt | expr_stmt }
-let_stmt  = { "let" ~ ident ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
-expr_stmt = { expr ~ ";" }
-// TODO: drop_stmt   - explicit drop: `drop x;`
-// TODO: endlft_stmt - lifetime end:  `endlft 'a;`
-// TODO: newlft_stmt - lifetime intro: `newlft 'a;`
+stmt        = { let_stmt | borrow_stmt | expr_stmt }
+let_stmt    = { "let" ~ ident ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
+borrow_stmt = { "let" ~ ident ~ "=" ~ "&" ~ lifetime ~ ident ~ ";" }
+expr_stmt   = { expr ~ ";" }
+// TODO: drop_stmt    - explicit drop: `drop x;`
+// TODO: endlft_stmt  - lifetime end:  `endlft 'a;`
+// TODO: newlft_stmt  - lifetime intro: `newlft 'a;`
+// TODO: cast_stmt    - type coercion: `x as #'a qbit;`
 
-// Expression hierarchy (lowest to highest precedence)
-expr       =  { expr_or }
-expr_or    =  { expr_and   ~ ("||"    ~ expr_and)* }
-expr_and   =  { expr_eq    ~ ("&&"    ~ expr_eq)* }
-expr_eq    =  { expr_unary ~ (eq_op   ~ expr_unary)? }
-eq_op      =  { "==" | "!=" }
-expr_unary =  { unary_op ~ expr_unary | borrow_expr | unique_expr | expr_atom }
-unary_op   =  { "!" | "*" }
-
-borrow_expr = { "&" ~ lifetime ~ expr_unary }
-unique_expr = { "#" ~ lifetime ~ expr_unary }
-
-expr_atom = {
+// Expressions (Fig. 3): all sub-terms should be variables (ANF)
+expr = {
     if_expr
   | block
   | lit_bool
@@ -39,11 +30,16 @@ expr_atom = {
   | tuple_expr
   | call_expr
   | ident
-  | "(" ~ expr ~ ")"
+  // U
+  // MEAS
+  // [c]x
+  // TODO: lift_expr   - classical function lifting: `[f](args)`
+  // 
+
+  // Less important
+  // TODO: copy_expr   - explicit copy: `copy x`
   // TODO: qif_expr    - quantum conditional: `qif r { ... } else { ... }` where r: &'a qbit
   // TODO: qstate_expr - quantum state literals: |0> and |1>
-  // TODO: lift_expr   - classical function lifting: `[f](args)`
-  // TODO: cast_expr   - type coercion: `x as #'a qbit`
 }
 
 lit_bool   =  { "true" | "false" }

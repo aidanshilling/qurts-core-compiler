@@ -402,18 +402,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "qlt"
+name = "qauc"
 version = "0.1.0"
 dependencies = [
  "melior",
+ "qduc",
 ]
 
 [[package]]
-name = "qss"
+name = "qduc"
 version = "0.1.0"
 dependencies = [
  "melior",
- "qlt",
+ "mlir-sys",
 ]
 
 [[package]]

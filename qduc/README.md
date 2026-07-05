@@ -1,9 +1,9 @@
-# qlt
+# qduc
 
 MLIR dialect for the qurts lifetime and region constraint system.
-The main purpose of this dialect to provide explicit markers for the verifier when checking `qss.uncompute`'s. It also provides lifetime types for `qss`.
+The main purpose of this dialect to provide explicit markers for the verifier when checking `qauc.uncompute`'s. It also provides lifetime types for `qauc`.
 
-`qlt` is target-agnostic - it knows nothing about quantum gates or classical computation,
+`qduc` is target-agnostic - it knows nothing about quantum gates or classical computation,
 only about lifetime variables, their ordering constraints, and the scopes they bound.
 
 ## Planned contents
@@ -13,8 +13,8 @@ only about lifetime variables, their ordering constraints, and the scopes they b
   the point at which a lifetime ends is a concrete, schedulable node in the dataflow graph
 
 **Ops**
-- `qlt.region` - opens a lifetime scope; yields a lifetime token and a scoped block
-- `qlt.end` - closes a lifetime scope, firing any cleanup obligations attached to it
+- `qduc.region` - opens a lifetime scope; yields a lifetime token and a scoped block
+- `qduc.end` - closes a lifetime scope, firing any cleanup obligations attached to it
 
 **Attributes**
 - `OrderingConstraintAttr` - encodes `'a <= 'b` and `'a != 'b` constraints on function signatures

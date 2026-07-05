@@ -26,8 +26,8 @@ fn foo<'a, 'b, 'a <= 'b>(x: #'a qbit, y: &'b bool) -> ()
 | Crate    | Description |
 |----------|-------------|
 | `parser` | PEG grammar and parse tree via pest |
-| `qlt`    | MLIR dialect for the lifetime/region constraint system |
-| `qss`    | MLIR dialect for quantum sub-structural ownership types |
+| `qduc`   | MLIR dialect for the lifetime/region constraint system |
+| `qauc`   | MLIR dialect for quantum sub-structural ownership types |
 
 ## Compilation pipeline
 
@@ -38,7 +38,7 @@ qurts source
 parse tree (pest)
     │
     ▼  (AST lowering — TODO)
-qlt + qss MLIR dialects
+qduc + qauc MLIR dialects
     │
     ▼  (uncomputation lowering pass — TODO)
 target quantum circuit dialect (e.g. Catalyst, QIR)
@@ -52,6 +52,6 @@ with the University of Edinburgh's current [generative AI policy & assement regu
 
 ## Building
 
-The `parser` crate has no system dependencies. The `qlt` and `qss` crates depend on
+The `parser` crate has no system dependencies. The `qduc` and `qauc` crates depend on
 [melior](https://github.com/raviqqe/melior) (Rust MLIR bindings) and require MLIR to be
 installed with `MLIR_SYS_*` environment variables set appropriately.
