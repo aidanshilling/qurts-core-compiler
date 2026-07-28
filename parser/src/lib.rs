@@ -287,4 +287,29 @@ mod tests {
         ok("fn f(letter : bool) -> bool { letter }");
         ok("fn iffy() -> bool { iffy() }");
     }
+
+    #[test]
+    fn expr_qif() {
+        ok("fn f<'a>(r : &'a bool) -> bool { qif r { true } else { false } }");
+    }
+
+    #[test]
+    fn expr_qif_with_lifted() {
+        ok("fn f<'a>(r : &'a qbit) -> qbit { qif r { let z : qbit = [1](); z } else { let z : qbit = [0](); z } }");
+    }
+
+    #[test]
+    fn reject_qif_without_else() {
+        err("fn f<'a>(r : &'a bool) -> bool { qif r { true } }");
+    }
+
+    #[test]
+    fn reject_qif_non_ident_condition() {
+        err("fn f() -> bool { qif (true) { true } else { false } }");
+    }
+
+    #[test]
+    fn reject_qif_as_ident() {
+        err("fn f(qif : bool) -> bool { qif }");
+    }
 }
