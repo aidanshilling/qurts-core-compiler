@@ -1,4 +1,3 @@
-use pest::Parser;
 use pest_derive::Parser;
 
 #[derive(Parser)]
@@ -7,6 +6,7 @@ pub struct QurtsParser;
 
 #[cfg(test)]
 mod tests {
+    use pest::Parser;
     use super::*;
 
     fn ok(src: &str) {
@@ -220,5 +220,71 @@ mod tests {
     #[test]
     fn reject_let_no_type() {
         err("fn f() -> bool { let x = true; x }");
+    }
+
+    #[test]
+    fn expr_measurement() {
+        ok("fn f(x : qbit) -> bool { meas(x) }");
+    }
+
+    #[test]
+    fn expr_unitary() {
+        ok("fn f(x : qbit) -> qbit { H(x) }");
+    }
+
+    #[test]
+    fn expr_lifted_zero_arity_ident() {
+        ok("fn f() -> qbit { [new]() }");
+    }
+
+    #[test]
+    fn expr_lifted_zero_arity_qstate_const() {
+        ok("fn f() -> qbit { [0]() }");
+        ok("fn f() -> qbit { [1]() }");
+    }
+
+    #[test]
+    fn expr_lifted_one_arg() {
+        ok("fn f(x : qbit) -> qbit { [X](x) }");
+    }
+
+    #[test]
+    fn reject_lifted_multi_digit_qstate_const() {
+        err("fn f() -> qbit { [2]() }");
+    }
+
+    #[test]
+    fn call_expr_zero_and_multi_arg_still_work() {
+        ok("fn f() -> bool { g() }");
+        ok("fn f(x : bool, y : bool) -> bool { g(x, y) }");
+    }
+
+    #[test]
+    fn newlft_endlft_stmts() {
+        ok("fn f() -> bool { newlft 'a; endlft 'a; true }");
+    }
+
+    #[test]
+    fn reject_endlft_without_semicolon() {
+        err("fn f() -> bool { endlft 'a }");
+    }
+
+    #[test]
+    fn reject_endlft_without_lifetime() {
+        err("fn f() -> bool { endlft; true }");
+    }
+
+    #[test]
+    fn reject_keywords_as_idents() {
+        err("fn f() -> bool { let; true }");
+        err("fn f() -> bool { if; true }");
+        err("fn f() -> bool { newlft; true }");
+        err("fn f(let : bool) -> bool { let }");
+    }
+
+    #[test]
+    fn keyword_prefix_is_still_a_valid_ident() {
+        ok("fn f(letter : bool) -> bool { letter }");
+        ok("fn iffy() -> bool { iffy() }");
     }
 }

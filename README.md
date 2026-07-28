@@ -52,6 +52,13 @@ with the University of Edinburgh's current [generative AI policy & assement regu
 
 ## Building
 
-The `parser` crate has no system dependencies. The `qduc` and `qauc` crates depend on
-[melior](https://github.com/raviqqe/melior) (Rust MLIR bindings) and require MLIR to be
-installed with `MLIR_SYS_*` environment variables set appropriately.
+The `parser` crate has no system dependencies.
+
+The `qduc` and `qauc` crates depend on [melior](https://github.com/raviqqe/melior) (Rust MLIR
+bindings) and require MLIR to be installed (`brew install llvm cmake ninja`; the base `mlir-sys`
+crate locates it via `llvm-config` on `PATH` or an `MLIR_SYS_220_PREFIX` env var).
+
+Beyond that, each dialect also has a hand-written C++ implementation generated from its
+`.td` file, which must be built with CMake *before* `cargo build`/`cargo test` will link —
+see `qduc/cpp/README.md` and `qauc/cpp/README.md` for the exact commands. `cargo build` does
+not build this C++ side itself; it only links against the static libraries CMake produces.

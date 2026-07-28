@@ -13,11 +13,17 @@ only about lifetime variables, their ordering constraints, and the scopes they b
   the point at which a lifetime ends is a concrete, schedulable node in the dataflow graph
 
 **Ops**
-- `qduc.region` - opens a lifetime scope; yields a lifetime token and a scoped block
+- `qduc.region` - opens a lifetime scope; the lifetime token is a block argument of the
+  op's region (not a result of the op itself), e.g. `qduc.region { ^bb0(%lt: !qduc.lt): ... }`
 - `qduc.end` - closes a lifetime scope, firing any cleanup obligations attached to it
 
 **Attributes**
 - `OrderingConstraintAttr` - encodes `'a <= 'b` and `'a != 'b` constraints on function signatures
+
+## Build
+
+See [`cpp/README.md`](cpp/README.md) for the C++ dialect build (tablegen + CMake), which the
+Rust crate's `build.rs` links against. Then `cargo build` / `cargo test` as usual.
 
 ## Dependency
 

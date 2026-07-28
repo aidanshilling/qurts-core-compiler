@@ -12,13 +12,13 @@ param      = { ident ~ ":" ~ ty }
 
 block = { "{" ~ stmt* ~ expr? ~ "}" }
 
-stmt        = { let_stmt | borrow_stmt | expr_stmt }
+stmt        = { let_stmt | borrow_stmt | newlft_stmt | endlft_stmt | expr_stmt }
 let_stmt    = { "let" ~ ident ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
 borrow_stmt = { "let" ~ ident ~ "=" ~ "&" ~ lifetime ~ ident ~ ";" }
+newlft_stmt = { "newlft" ~ lifetime ~ ";" }
+endlft_stmt = { "endlft" ~ lifetime ~ ";" }
 expr_stmt   = { expr ~ ";" }
 // TODO: drop_stmt    - explicit drop: `drop x;`
-// TODO: endlft_stmt  - lifetime end:  `endlft 'a;`
-// TODO: newlft_stmt  - lifetime intro: `newlft 'a;`
 // TODO: cast_stmt    - type coercion: `x as #'a qbit;`
 
 // Expressions (Fig. 3): all sub-terms should be variables (ANF)
@@ -27,14 +27,12 @@ expr = {
   | block
   | lit_bool
   | lit_unit
+  | meas_expr
+  | unitary_expr
+  | lifted_expr
   | tuple_expr
   | call_expr
   | ident
-  // U
-  // MEAS
-  // [c]x
-  // TODO: lift_expr   - classical function lifting: `[f](args)`
-  // 
 
   // Less important
   // TODO: copy_expr   - explicit copy: `copy x`
@@ -49,7 +47,20 @@ call_expr  =  { ident ~ "(" ~ arg_list ~ ")" }
 arg_list   =  { (expr ~ ("," ~ expr)*)? }
 if_expr    =  { "if" ~ expr ~ block ~ ("else" ~ block)? }
 
-ident = @{ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
+// meas_expr/unitary_expr must precede call_expr: `f(x)` with one bare-ident arg has the
+// same shape as U(x)/meas(x), so ordering in `expr` is what disambiguates them.
+meas_expr    =  { "meas" ~ "(" ~ ident ~ ")" }
+// U(x) forces the result to linear (lifetime ⊥) — see TYP UNITARY.
+unitary_expr =  { ident ~ "(" ~ ident ~ ")" }
+// [c](x) keeps the input's lifetime (vs unitary_expr) — see TYP LIFTED. c is a gate name,
+// or 0/1 naming the state-prep function for a fresh qubit (e.g. [0]() = new qubit in |0>).
+lifted_expr  =  { "[" ~ (ident | qstate_const) ~ "]" ~ "(" ~ ident? ~ ")" }
+qstate_const =  { "0" | "1" }
+
+// Keywords must not also match as plain idents, else e.g. `endlft` falls back to being
+// parsed as a bare-identifier expr when endlft_stmt fails to match (missing lifetime).
+keyword = @{ ("fn" | "let" | "else" | "if" | "true" | "false" | "newlft" | "endlft" | "meas") ~ !(ASCII_ALPHANUMERIC | "_") }
+ident   = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 // Lifetime: α | ⊥ | ⊤
 lifetime        =  { "'" ~ (lifetime_empty | lifetime_static | lifetime_var) }
