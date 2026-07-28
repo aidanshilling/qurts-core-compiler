@@ -1,0 +1,7 @@
+fn always_true() -> bool {
+    true
+}
+
+fn choose(x : bool) -> bool {
+    if x { true } else { false }
+}

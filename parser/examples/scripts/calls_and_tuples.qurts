@@ -1,0 +1,19 @@
+fn pair(x : bool, y : qbit) -> (bool, qbit) {
+    (x, y)
+}
+
+fn helper() -> bool {
+    true
+}
+
+fn combine(x : bool, y : bool) -> bool {
+    x
+}
+
+fn call_no_args() -> bool {
+    helper()
+}
+
+fn call_multi_args(x : bool, y : bool) -> bool {
+    combine(x, y)
+}

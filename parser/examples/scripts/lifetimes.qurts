@@ -1,0 +1,14 @@
+fn borrow_example<'a>(x : bool) -> bool {
+    let y = &'a x;
+    y
+}
+
+fn scoped_lifetime() -> bool {
+    newlft 'a;
+    endlft 'a;
+    true
+}
+
+fn ordered_lifetimes<'a, 'b, 'a <= 'b>(x : &'a bool, y : &'b bool) -> &'a bool {
+    x
+}

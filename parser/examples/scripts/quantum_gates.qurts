@@ -1,0 +1,5 @@
+fn prepare_and_measure() -> bool {
+    let q : qbit = [0]();
+    let q2 : qbit = H(q);
+    meas(q2)
+}

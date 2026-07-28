@@ -1,0 +1,15 @@
+fn example() -> qbit {
+    let x0 : qbit = [0]();
+    let x1 : qbit = H(x0);
+    newlft 'a;
+    let r = &'a x1;
+    let y : qbit = qif r {
+        let z : qbit = [1]();
+        z
+    } else {
+        let z : qbit = [0]();
+        z
+    };
+    endlft 'a;
+    y
+}

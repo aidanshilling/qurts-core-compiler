@@ -1,0 +1,9 @@
+fn copy_via_qif<'a>(r : &'a qbit) -> qbit {
+    qif r {
+        let z : qbit = [1]();
+        z
+    } else {
+        let z : qbit = [0]();
+        z
+    }
+}

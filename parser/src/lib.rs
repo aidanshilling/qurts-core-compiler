@@ -1,8 +1,32 @@
+use pest::iterators::{Pair, Pairs};
 use pest_derive::Parser;
 
 #[derive(Parser)]
 #[grammar = "qurts.pest"]
 pub struct QurtsParser;
+
+pub fn format_parse_tree(pairs: Pairs<Rule>) -> String {
+    let mut out = String::new();
+    for pair in pairs {
+        format_pair(pair, 0, &mut out);
+    }
+    out
+}
+
+fn format_pair(pair: Pair<Rule>, depth: usize, out: &mut String) {
+    let rule = pair.as_rule();
+    let text = pair.as_str();
+    let indent = "  ".repeat(depth);
+    let children: Vec<_> = pair.into_inner().collect();
+    if children.is_empty() {
+        out.push_str(&format!("{indent}{rule:?} {text:?}\n"));
+    } else {
+        out.push_str(&format!("{indent}{rule:?}\n"));
+        for child in children {
+            format_pair(child, depth + 1, out);
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
