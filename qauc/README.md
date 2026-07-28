@@ -31,6 +31,11 @@ have been ended by the time the value is consumed.
 tracing which gate ops were applied to a given qbit, generating their inverses, and
 emitting them into the target quantum circuit dialect (e.g. Catalyst, QIR).
 
+## Build
+
+See [`cpp/README.md`](cpp/README.md) for the C++ dialect build (tablegen + CMake), which the
+Rust crate's `build.rs` links against. Then `cargo build` / `cargo test` as usual.
+
 ## Dependencies
 
 - `qduc` (path dependency) - lifetime tokens used in `!qauc.unique` and `!qauc.ref` type parameters

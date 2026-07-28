@@ -406,6 +406,7 @@ name = "qauc"
 version = "0.1.0"
 dependencies = [
  "melior",
+ "mlir-sys",
  "qduc",
 ]
 
