@@ -4,6 +4,8 @@ Compiler for the qurts quantum programming language. qurts is a statically-typed
 a lifetime and ownership system designed to enforce correct quantum uncomputation — the requirement
 that ancilla qubits are returned to their original state before being released.
 
+Link to original Qurts paper - https://arxiv.org/pdf/2411.10835
+
 ## Language overview
 
 qurts has two reference types built around lifetimes:
