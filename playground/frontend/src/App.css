@@ -1,0 +1,90 @@
+.app {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.app-header h1 {
+  margin-bottom: 0.25rem;
+}
+
+.app-header p {
+  color: var(--muted);
+  margin-top: 0;
+}
+
+.source-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.source-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.source-editor-textarea {
+  width: 100%;
+  min-height: 10rem;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--fg);
+  resize: vertical;
+}
+
+.stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.stage-panel {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.75rem;
+  background: var(--panel-bg);
+}
+
+.stage-panel h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+}
+
+.stage-text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.85rem;
+}
+
+.stage-functions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.function-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.function-ok .function-name {
+  color: var(--ok);
+}
+
+.function-error .function-name {
+  color: var(--err);
+}
+
+.parse-error {
+  color: var(--err);
+  white-space: pre-wrap;
+}
