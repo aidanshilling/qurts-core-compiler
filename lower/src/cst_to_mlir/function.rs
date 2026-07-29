@@ -1,5 +1,4 @@
 use super::{
-    Lowerer,
     block::lower_block_body,
     env::Env,
     error::LowerError,
@@ -7,6 +6,7 @@ use super::{
     ty::{lower_ty, shape_of_ty},
     value::{LoweredValue, Shape},
 };
+use crate::Lowerer;
 use melior::{
     Context,
     dialect::func,

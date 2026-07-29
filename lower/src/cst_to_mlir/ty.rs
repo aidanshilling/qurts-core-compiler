@@ -64,7 +64,7 @@ fn parse_type<'c>(context: &'c Context, source: &str) -> Result<Type<'c>, LowerE
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cst_to_mlir::test_util::test_context;
+    use crate::default_context as test_context;
     use pest::Parser;
 
     fn ty_pair(source: &'static str) -> Pair<'static, Rule> {

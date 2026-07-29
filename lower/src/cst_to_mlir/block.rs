@@ -1,4 +1,5 @@
-use super::{Lowerer, env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
+use super::{env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
+use crate::Lowerer;
 use melior::ir::Block;
 use parser::Rule;
 use pest::iterators::Pair;

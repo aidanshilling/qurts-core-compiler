@@ -1,10 +1,5 @@
-use lower::cst_to_mlir::lower_program;
-use melior::{
-    Context,
-    dialect::DialectRegistry,
-    ir::operation::OperationLike,
-    utility::register_all_dialects,
-};
+use lower::{default_context, lower_program};
+use melior::ir::operation::OperationLike;
 use parser::{QurtsParser, Rule};
 use pest::Parser;
 use std::fs;
@@ -12,17 +7,6 @@ use std::fs;
 enum Outcome {
     Lowers,
     Rejected,
-}
-
-fn test_context() -> Context {
-    let context = Context::new();
-    let registry = DialectRegistry::new();
-    register_all_dialects(&registry);
-    context.append_dialect_registry(&registry);
-    context.load_all_available_dialects();
-    qduc::dialect::register(&context);
-    qauc::dialect::register(&context);
-    context
 }
 
 /// Per-function expected outcome for each bundled example script, per the plan:
@@ -63,7 +47,7 @@ fn example_scripts_lower_as_expected() {
         let source =
             fs::read_to_string(&path).unwrap_or_else(|e| panic!("failed to read {path}: {e}"));
 
-        let context = test_context();
+        let context = default_context();
         let pairs = QurtsParser::parse(Rule::program, &source)
             .unwrap_or_else(|e| panic!("failed to parse {path}:\n{e}"));
         let result = lower_program(&context, pairs);

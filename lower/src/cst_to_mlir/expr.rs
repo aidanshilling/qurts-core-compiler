@@ -1,4 +1,5 @@
-use super::{Lowerer, block::lower_block_body, env::Env, error::LowerError, value::LoweredValue};
+use super::{block::lower_block_body, env::Env, error::LowerError, value::LoweredValue};
+use crate::Lowerer;
 use melior::{
     dialect::{arith, func, scf},
     ir::{
@@ -18,7 +19,10 @@ pub fn lower_expr<'c>(
     pair: Pair<Rule>,
 ) -> Result<LoweredValue<'c>, LowerError> {
     let text = pair.as_str().to_string();
-    let inner = pair.into_inner().next().expect("expr always has exactly one child");
+    let inner = pair
+        .into_inner()
+        .next()
+        .expect("expr always has exactly one child");
     let location = Location::unknown(lowerer.context);
 
     match inner.as_rule() {
@@ -26,14 +30,25 @@ pub fn lower_expr<'c>(
             let value = inner.as_str() == "true";
             let attr =
                 IntegerAttribute::new(IntegerType::new(lowerer.context, 1).into(), value as i64);
-            let op = block.append_operation(arith::constant(lowerer.context, attr.into(), location));
+            let op =
+                block.append_operation(arith::constant(lowerer.context, attr.into(), location));
             Ok(LoweredValue::single(op.result(0)?))
         }
         Rule::lit_unit => Ok(LoweredValue::Tuple(vec![])),
         Rule::tuple_expr => {
             let mut children = inner.into_inner();
-            let lhs = lower_expr(lowerer, env, block, children.next().expect("tuple_expr has two exprs"))?;
-            let rhs = lower_expr(lowerer, env, block, children.next().expect("tuple_expr has two exprs"))?;
+            let lhs = lower_expr(
+                lowerer,
+                env,
+                block,
+                children.next().expect("tuple_expr has two exprs"),
+            )?;
+            let rhs = lower_expr(
+                lowerer,
+                env,
+                block,
+                children.next().expect("tuple_expr has two exprs"),
+            )?;
             Ok(LoweredValue::Tuple(vec![lhs, rhs]))
         }
         Rule::ident => env
@@ -62,7 +77,11 @@ fn lower_call<'c>(
     location: Location<'c>,
 ) -> Result<LoweredValue<'c>, LowerError> {
     let mut children = pair.into_inner();
-    let callee_name = children.next().expect("call_expr has an ident").as_str().to_string();
+    let callee_name = children
+        .next()
+        .expect("call_expr has an ident")
+        .as_str()
+        .to_string();
     let arg_list = children.next().expect("call_expr has an arg_list");
 
     let mut operands: Vec<Value<'c, 'c>> = Vec::new();
@@ -133,7 +152,13 @@ fn lower_if<'c>(
     let else_region = Region::new();
     else_region.append_block(else_block);
 
-    let op = block.append_operation(scf::r#if(condition, &result_types, then_region, else_region, location));
+    let op = block.append_operation(scf::r#if(
+        condition,
+        &result_types,
+        then_region,
+        else_region,
+        location,
+    ));
 
     let results: Vec<Value<'c, 'c>> = (0..result_types.len())
         .map(|i| Value::from(op.result(i).expect("scf.if produces declared result count")))
@@ -141,22 +166,30 @@ fn lower_if<'c>(
     match results.as_slice() {
         [] => Ok(LoweredValue::Tuple(vec![])),
         [value] => Ok(LoweredValue::single(*value)),
-        _ => Ok(LoweredValue::Tuple(results.into_iter().map(LoweredValue::single).collect())),
+        _ => Ok(LoweredValue::Tuple(
+            results.into_iter().map(LoweredValue::single).collect(),
+        )),
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cst_to_mlir::test_util::test_context;
+    use crate::default_context as test_context;
     use melior::ir::{Module, operation::OperationLike};
     use pest::Parser;
     use std::collections::HashMap;
 
-    fn lower_top_expr<'c>(lowerer: &Lowerer<'c, '_>, source: &str) -> (LoweredValue<'c>, Module<'c>) {
+    fn lower_top_expr<'c>(
+        lowerer: &Lowerer<'c, '_>,
+        source: &str,
+    ) -> (LoweredValue<'c>, Module<'c>) {
         let module = Module::new(Location::unknown(lowerer.context));
         let mut env = Env::new();
-        let pair = parser::QurtsParser::parse(Rule::expr, source).unwrap().next().unwrap();
+        let pair = parser::QurtsParser::parse(Rule::expr, source)
+            .unwrap()
+            .next()
+            .unwrap();
         let value = lower_expr(lowerer, &mut env, &module.body(), pair).unwrap();
         (value, module)
     }
@@ -165,7 +198,10 @@ mod tests {
     fn lowers_bool_literal() {
         let context = test_context();
         let signatures = HashMap::new();
-        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let lowerer = Lowerer {
+            context: &context,
+            signatures: &signatures,
+        };
         let (value, _module) = lower_top_expr(&lowerer, "true");
         assert!(value.as_single().is_some());
     }
@@ -174,7 +210,10 @@ mod tests {
     fn lowers_tuple() {
         let context = test_context();
         let signatures = HashMap::new();
-        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let lowerer = Lowerer {
+            context: &context,
+            signatures: &signatures,
+        };
         let (value, _module) = lower_top_expr(&lowerer, "(true, false)");
         match value {
             LoweredValue::Tuple(values) => assert_eq!(values.len(), 2),
@@ -186,7 +225,10 @@ mod tests {
     fn lowers_if_expr() {
         let context = test_context();
         let signatures = HashMap::new();
-        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let lowerer = Lowerer {
+            context: &context,
+            signatures: &signatures,
+        };
         let (value, module) = lower_top_expr(&lowerer, "if true { true } else { false }");
         assert!(value.as_single().is_some());
         assert!(module.as_operation().verify());
@@ -196,11 +238,20 @@ mod tests {
     fn rejects_unitary_expr() {
         let context = test_context();
         let signatures = HashMap::new();
-        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let lowerer = Lowerer {
+            context: &context,
+            signatures: &signatures,
+        };
         let module = Module::new(Location::unknown(&context));
         let mut env = Env::new();
-        let pair = parser::QurtsParser::parse(Rule::expr, "H(x)").unwrap().next().unwrap();
+        let pair = parser::QurtsParser::parse(Rule::expr, "H(x)")
+            .unwrap()
+            .next()
+            .unwrap();
         let result = lower_expr(&lowerer, &mut env, &module.body(), pair);
-        assert!(matches!(result, Err(LowerError::UnsupportedExpr(Rule::unitary_expr, _))));
+        assert!(matches!(
+            result,
+            Err(LowerError::UnsupportedExpr(Rule::unitary_expr, _))
+        ));
     }
 }
