@@ -1,11 +1,17 @@
-pub mod cst_to_mlir;
+pub mod block;
 pub mod cst_to_qauc;
 pub mod cst_to_qduc;
+pub mod env;
+pub mod error;
+pub mod expr;
+pub mod function;
+pub mod signature;
+pub mod ty;
+pub mod value;
 
-use cst_to_mlir::error::LowerError;
-use cst_to_mlir::function::{collect_signature, lower_function};
-use cst_to_mlir::function_name;
-use cst_to_mlir::signature::FunctionSignature;
+use error::LowerError;
+use function::{collect_signature, function_name, lower_function};
+use signature::FunctionSignature;
 
 use melior::{
     Context,

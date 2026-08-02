@@ -1,4 +1,4 @@
-use super::{error::LowerError, value::Shape};
+use crate::{cst_to_qauc, error::LowerError, value::Shape};
 use melior::{
     Context,
     ir::{Type, r#type::IntegerType},
@@ -29,7 +29,7 @@ pub fn lower_ty<'c>(context: &'c Context, pair: Pair<Rule>) -> Result<Vec<Type<'
     match inner.as_rule() {
         Rule::bool_ty => Ok(vec![IntegerType::new(context, 1).into()]),
         Rule::unit_ty => Ok(vec![]),
-        Rule::qbit_ty => Ok(vec![parse_type(context, "!qauc.qbit")?]),
+        Rule::qbit_ty => Ok(vec![cst_to_qauc::qbit_type(context)?]),
         Rule::product_ty => {
             let mut children = inner.into_inner();
             let lhs = lower_ty(context, children.next().expect("product_ty has two ty children"))?;
@@ -37,11 +37,16 @@ pub fn lower_ty<'c>(context: &'c Context, pair: Pair<Rule>) -> Result<Vec<Type<'
             Ok(lhs.into_iter().chain(rhs).collect())
         }
         Rule::ref_ty | Rule::unique_ty => {
-            let mnemonic = if inner.as_rule() == Rule::ref_ty { "ref" } else { "unique" };
+            let is_ref = inner.as_rule() == Rule::ref_ty;
             let mut children = inner.into_inner();
             let _lifetime = children.next().expect("ref_ty/unique_ty has a lifetime child");
             let value_ty = require_single(context, children.next().expect("ref_ty/unique_ty has a ty child"))?;
-            Ok(vec![parse_type(context, &format!("!qauc.{mnemonic}<!qduc.lt, {value_ty}>"))?])
+            let ty = if is_ref {
+                cst_to_qauc::ref_type(context, value_ty)?
+            } else {
+                cst_to_qauc::unique_type(context, value_ty)?
+            };
+            Ok(vec![ty])
         }
         rule => unreachable!("unexpected ty variant {rule:?}"),
     }
@@ -55,10 +60,6 @@ fn require_single<'c>(context: &'c Context, pair: Pair<Rule>) -> Result<Type<'c>
             "reference/unique wrapping a non-single-valued type is not yet supported: {text}"
         ))),
     }
-}
-
-fn parse_type<'c>(context: &'c Context, source: &str) -> Result<Type<'c>, LowerError> {
-    Type::parse(context, source).ok_or_else(|| LowerError::UnsupportedType(source.to_string()))
 }
 
 #[cfg(test)]

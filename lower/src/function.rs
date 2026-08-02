@@ -20,6 +20,16 @@ use melior::{
 use parser::Rule;
 use pest::iterators::Pair;
 
+pub fn function_name(function_pair: &Pair<Rule>) -> String {
+    function_pair
+        .clone()
+        .into_inner()
+        .next()
+        .expect("function has a name")
+        .as_str()
+        .to_string()
+}
+
 fn param_list_pair(function_pair: Pair<Rule>) -> Pair<Rule> {
     let mut children = function_pair.into_inner();
     let signature_pair = children.nth(1).expect("function has a signature");
