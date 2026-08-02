@@ -6,7 +6,10 @@ pub enum LowerError {
     UnsupportedStmt(Rule, String),
     UnsupportedExpr(Rule, String),
     UnsupportedType(String),
+    UnsupportedLifetime(Rule, String),
     UndefinedVariable(String),
+    LifetimeAlreadyOpen(String),
+    UnknownLifetime(String),
     Mlir(melior::Error),
 }
 
@@ -26,7 +29,14 @@ impl fmt::Display for LowerError {
                 write!(f, "unsupported expression ({rule:?}): {text}")
             }
             LowerError::UnsupportedType(text) => write!(f, "unsupported type: {text}"),
+            LowerError::UnsupportedLifetime(rule, text) => {
+                write!(f, "unsupported lifetime ({rule:?}): {text}")
+            }
             LowerError::UndefinedVariable(name) => write!(f, "undefined variable: {name}"),
+            LowerError::LifetimeAlreadyOpen(name) => write!(f, "lifetime already open: {name}"),
+            LowerError::UnknownLifetime(name) => {
+                write!(f, "endlft on unknown or already-closed lifetime: {name}")
+            }
             LowerError::Mlir(error) => write!(f, "MLIR error: {error}"),
         }
     }

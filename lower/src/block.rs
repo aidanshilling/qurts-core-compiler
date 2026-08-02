@@ -1,6 +1,6 @@
-use super::{env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
+use super::{cst_to_qduc, env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
 use crate::Lowerer;
-use melior::ir::Block;
+use melior::ir::{Block, Location};
 use parser::Rule;
 use pest::iterators::Pair;
 
@@ -47,9 +47,122 @@ fn lower_stmt<'c>(
             lower_expr(lowerer, env, mlir_block, expr_pair)?;
             Ok(())
         }
-        Rule::borrow_stmt | Rule::newlft_stmt | Rule::endlft_stmt => {
-            Err(LowerError::UnsupportedStmt(inner.as_rule(), text))
+        Rule::newlft_stmt => {
+            let location = Location::unknown(lowerer.context);
+            let name = lifetime_var_name(inner, &text)?;
+            let token = cst_to_qduc::newlft(lowerer.context, mlir_block, location)?;
+            if !env.open_lifetime(name.clone(), token) {
+                return Err(LowerError::LifetimeAlreadyOpen(format!("'{name}")));
+            }
+            Ok(())
         }
+        Rule::endlft_stmt => {
+            let location = Location::unknown(lowerer.context);
+            let name = lifetime_var_name(inner, &text)?;
+            let token = env
+                .close_lifetime(&name)
+                .ok_or_else(|| LowerError::UnknownLifetime(format!("'{name}")))?;
+            cst_to_qduc::end(mlir_block, token.as_value(), location)?;
+            Ok(())
+        }
+        Rule::borrow_stmt => Err(LowerError::UnsupportedStmt(inner.as_rule(), text)),
         rule => unreachable!("unexpected stmt variant {rule:?}"),
+    }
+}
+
+/// Rejects `'0`/`'static` as newlft/endlft targets.
+fn lifetime_var_name(stmt_pair: Pair<Rule>, stmt_text: &str) -> Result<String, LowerError> {
+    let lifetime_pair = stmt_pair.into_inner().next().expect("newlft/endlft_stmt has a lifetime");
+    let variant = lifetime_pair.into_inner().next().expect("lifetime has exactly one variant");
+    match variant.as_rule() {
+        Rule::lifetime_var => Ok(variant.as_str().to_string()),
+        Rule::lifetime_empty | Rule::lifetime_static => {
+            Err(LowerError::UnsupportedLifetime(variant.as_rule(), stmt_text.to_string()))
+        }
+        rule => unreachable!("unexpected lifetime variant {rule:?}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::default_context as test_context;
+    use melior::ir::{Location, Module, operation::OperationLike};
+    use pest::Parser;
+    use std::collections::HashMap;
+
+    fn lower_top_block<'c>(
+        lowerer: &Lowerer<'c, '_>,
+        source: &str,
+    ) -> (Result<Option<LoweredValue<'c>>, LowerError>, Module<'c>) {
+        let module = Module::new(Location::unknown(lowerer.context));
+        let mut env = Env::new();
+        let pair = parser::QurtsParser::parse(Rule::block, source).unwrap().next().unwrap();
+        let result = lower_block_body(lowerer, &mut env, &module.body(), pair);
+        (result, module)
+    }
+
+    #[test]
+    fn lowers_newlft_endlft() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, module) = lower_top_block(&lowerer, "{ newlft 'a; endlft 'a; }");
+        result.unwrap();
+        let text = module.as_operation().to_string();
+        assert!(text.contains("qduc.newlft"), "{text}");
+        assert!(text.contains("qduc.end"), "{text}");
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn lowers_crossing_lifetimes() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, module) =
+            lower_top_block(&lowerer, "{ newlft 'a; newlft 'b; endlft 'a; endlft 'b; }");
+        result.unwrap();
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn rejects_double_open_lifetime() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, _module) = lower_top_block(&lowerer, "{ newlft 'a; newlft 'a; }");
+        assert!(matches!(result, Err(LowerError::LifetimeAlreadyOpen(name)) if name == "'a"));
+    }
+
+    #[test]
+    fn rejects_endlft_unknown_lifetime() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, _module) = lower_top_block(&lowerer, "{ endlft 'a; }");
+        assert!(matches!(result, Err(LowerError::UnknownLifetime(name)) if name == "'a"));
+    }
+
+    #[test]
+    fn rejects_newlft_static() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, _module) = lower_top_block(&lowerer, "{ newlft 'static; }");
+        assert!(matches!(
+            result,
+            Err(LowerError::UnsupportedLifetime(Rule::lifetime_static, _))
+        ));
+    }
+
+    #[test]
+    fn rejects_borrow_stmt() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, _module) =
+            lower_top_block(&lowerer, "{ newlft 'a; let y = &'a x; endlft 'a; }");
+        assert!(matches!(result, Err(LowerError::UnsupportedStmt(Rule::borrow_stmt, _))));
     }
 }
