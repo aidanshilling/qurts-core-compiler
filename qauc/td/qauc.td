@@ -77,31 +77,47 @@ def Qauc_QubitResource : Resource<"QubitResource"> {}
 class Qauc_Op<string mnemonic, list<Trait> traits = []>
     : Op<Qauc_Dialect, mnemonic, traits>;
 
-def Qauc_BorrowOp : Qauc_Op<"borrow"> {
+def Qauc_BorrowOp : Qauc_Op<"borrow", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+]> {
   let summary = "creates a !qauc.ref from a value and a lifetime token";
   let description = [{
     Creates a `!qauc.ref<lt, T>` classically borrowing `$value` for
     `$lifetime`.
+
+    Implements MemoryEffectsOpInterface with Read on `$lifetime` (scoped to
+    that specific SSA value, not the resource generally), so effect-aware
+    optimizations see a conflict with `qduc.end`'s Free on the same value and
+    won't reorder this past it. This is advisory, not a substitute for
+    `hasVerifier` — passes that don't consult effects still rely on the
+    verifier as the backstop.
   }];
   let arguments = (ins AnyType:$value, Qduc_LifetimeType:$lifetime);
   let results = (outs Qauc_RefType:$result);
   let assemblyFormat = [{
     $value `,` $lifetime attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
-def Qauc_UniqueBorrowOp : Qauc_Op<"unique_borrow"> {
+def Qauc_UniqueBorrowOp : Qauc_Op<"unique_borrow", [
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
+]> {
   let summary = "creates a !qauc.unique from a value and a lifetime token";
   let description = [{
     Creates a `!qauc.unique<lt, T>` that obligates `$value` to `$lifetime`;
     the result must be consumed exactly once (by `qauc.release`) before
     `$lifetime` ends.
+
+    Implements MemoryEffectsOpInterface with Read on `$lifetime` (scoped to
+    that specific SSA value), same rationale as `qauc.borrow` above.
   }];
   let arguments = (ins AnyType:$value, Qduc_LifetimeType:$lifetime);
   let results = (outs Qauc_UniqueType:$result);
   let assemblyFormat = [{
     $value `,` $lifetime attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
 }
 
 def Qauc_ReleaseOp : Qauc_Op<"release"> {

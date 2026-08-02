@@ -42,25 +42,23 @@ def Qduc_LifetimeResource : Resource<"LifetimeResource"> {}
 class Qduc_Op<string mnemonic, list<Trait> traits = []>
     : Op<Qduc_Dialect, mnemonic, traits>;
 
-def Qduc_RegionOp : Qduc_Op<"region"> {
-  let summary = "Opens a lifetime scope";
-  let description = [{ Opens a new lifetime scope.  }];
-  let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "$body attr-dict";
-  let skipDefaultBuilders = 1;
-  let builders = [
-    OpBuilder<(ins), [{
-      mlir::Region *body = $_state.addRegion();
-      mlir::Block *entry = new mlir::Block();
-      entry->addArgument(LifetimeType::get($_builder.getContext()),
-                         $_state.location);
-      body->push_back(entry);
-    }]>
-  ];
+def Qduc_NewLftOp : Qduc_Op<"newlft"> {
+  let summary = "opens a new lifetime scope, producing its token";
+  let description = [{
+    Produces a fresh `!qduc.lt` token as an ordinary op result. Lifetimes are
+    not structurally nested here (unlike a region-based design) because
+    source-level lifetimes are only required to be minimal in their ordering
+    preorder, not stack-disciplined — two lifetimes with no ordering
+    constraint between them may have crossing newlft/endlft spans. This op's
+    verifier enforces: exactly one `qduc.end` consumes the result, and every
+    other use of it precedes that `qduc.end` in the same block.
+  }];
+  let results = (outs Qduc_LifetimeType:$lifetime);
+  let assemblyFormat = "attr-dict `:` type($lifetime)";
+  let hasVerifier = 1;
 }
 
 def Qduc_EndOp : Qduc_Op<"end", [
-    Terminator,
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {
   let summary = "Closes a lifetime scope";

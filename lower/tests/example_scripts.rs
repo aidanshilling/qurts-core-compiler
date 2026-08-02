@@ -14,7 +14,13 @@ enum Outcome {
 /// tuples); anything needing `newlft`/`endlft`/`borrow_stmt` (qduc) or
 /// `meas`/`unitary`/`lifted`/`qif` (qauc/gates) is rejected until later passes.
 const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
-    ("basic.qurts", &[("always_true", Outcome::Lowers), ("choose", Outcome::Lowers)]),
+    (
+        "basic.qurts",
+        &[
+            ("always_true", Outcome::Lowers),
+            ("choose", Outcome::Lowers),
+        ],
+    ),
     (
         "calls_and_tuples.qurts",
         &[
@@ -34,8 +40,14 @@ const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
         ],
     ),
     ("qif.qurts", &[("copy_via_qif", Outcome::Rejected)]),
-    ("quantum_gates.qurts", &[("prepare_and_measure", Outcome::Rejected)]),
-    ("uncompute_walkthrough.qurts", &[("example", Outcome::Rejected)]),
+    (
+        "quantum_gates.qurts",
+        &[("prepare_and_measure", Outcome::Rejected)],
+    ),
+    (
+        "uncompute_walkthrough.qurts",
+        &[("example", Outcome::Rejected)],
+    ),
 ];
 
 #[test]

@@ -92,6 +92,58 @@ if(NOT LLVM_ENABLE_RTTI)
 endif()
 
 # ---------------------------------------------------------------------------
+# qauc-opt — mlir-opt-alike registering qduc+qauc (+ func/arith/scf), for
+# lit/FileCheck verifier tests in ../test.
+# ---------------------------------------------------------------------------
+
+add_executable(qauc-opt tools/qauc-opt/qauc-opt.cpp)
+
+target_link_libraries(qauc-opt
+  PRIVATE
+    QaucDialect
+    QducDialect
+    MLIROptLib
+    MLIRFuncDialect
+    MLIRArithDialect
+    MLIRSCFDialect
+)
+
+if(NOT LLVM_ENABLE_EH)
+  target_compile_options(qauc-opt PRIVATE -fno-exceptions)
+endif()
+if(NOT LLVM_ENABLE_RTTI)
+  target_compile_options(qauc-opt PRIVATE -fno-rtti)
+endif()
+
+# ---------------------------------------------------------------------------
+# lit/FileCheck verifier tests (../test) — optional: only wired up if both
+# `lit` and `FileCheck` are found.
+# ---------------------------------------------------------------------------
+
+find_program(LIT_EXECUTABLE NAMES lit llvm-lit)
+find_program(FILECHECK_EXECUTABLE NAMES FileCheck HINTS ${LLVM_TOOLS_BINARY_DIR})
+
+if(LIT_EXECUTABLE AND FILECHECK_EXECUTABLE)
+  set(QAUC_TEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../test)
+  set(QAUC_TEST_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/test)
+  set(QAUC_OPT_EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/qauc-opt)
+
+  configure_file(
+    ${QAUC_TEST_SOURCE_DIR}/lit.site.cfg.py.in
+    ${QAUC_TEST_BINARY_DIR}/lit.site.cfg.py
+    @ONLY
+  )
+  add_custom_target(check-qauc
+    COMMAND ${LIT_EXECUTABLE} -v ${QAUC_TEST_BINARY_DIR}
+    DEPENDS qauc-opt
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Running qauc lit/FileCheck verifier tests"
+  )
+else()
+  message(STATUS "qauc: lit and/or FileCheck not found — skipping check-qauc target")
+endif()
+
+# ---------------------------------------------------------------------------
 # compile_commands.json — symlink into source tree so clangd finds it
 # ---------------------------------------------------------------------------
 
