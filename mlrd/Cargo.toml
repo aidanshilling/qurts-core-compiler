@@ -1,0 +1,10 @@
+[package]
+name = "mlrd"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+melior = "0.27.0"
+mlir-sys = "220.0.2"
+qduc = { path = "../qduc" }
+qauc = { path = "../qauc" }
