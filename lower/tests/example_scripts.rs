@@ -10,10 +10,9 @@ enum Outcome {
 }
 
 /// Per-function expected outcome for each bundled example script, per the plan:
-/// classical `func`/`arith`/`scf` constructs (plus flattened tuples) and
-/// `newlft`/`endlft` (qduc) lower; `borrow_stmt` (qduc, needs a qauc.borrow op —
-/// separate follow-up) and `meas`/`unitary`/`lifted`/`qif` (qauc/gates) are
-/// still rejected.
+/// classical `func`/`arith`/`scf` constructs (plus flattened tuples), `newlft`/
+/// `endlft` (qduc), and `borrow_stmt` (qauc.borrow) lower; `meas`/`unitary`/
+/// `lifted`/`qif` (mlrd) are still rejected.
 const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
     (
         "basic.qurts",
@@ -37,6 +36,9 @@ const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
         &[
             ("borrow_example", Outcome::Rejected),
             ("scoped_lifetime", Outcome::Lowers),
+            ("borrow_via_newlft", Outcome::Lowers),
+            ("crossing_borrows", Outcome::Lowers),
+            ("double_open_lifetime", Outcome::Rejected),
             ("ordered_lifetimes", Outcome::Lowers),
         ],
     ),

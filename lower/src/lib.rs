@@ -23,8 +23,9 @@ use parser::Rule;
 use pest::iterators::Pairs;
 use std::collections::HashMap;
 
-/// A `Context` with `func`/`arith`/`scf` (and `qduc`/`qauc`) registered — everything
-/// `lower_program` needs. Shared by tests, examples, and any consumer (e.g. `playground`).
+/// A `Context` with `func`/`arith`/`scf` (and `qduc`/`qauc`/`mlrd`) registered —
+/// everything `lower_program` needs. Shared by tests, examples, and any consumer
+/// (e.g. `playground`).
 pub fn default_context() -> Context {
     let context = Context::new();
     let registry = DialectRegistry::new();
@@ -33,6 +34,7 @@ pub fn default_context() -> Context {
     context.load_all_available_dialects();
     qduc::dialect::register(&context);
     qauc::dialect::register(&context);
+    mlrd::dialect::register(&context);
     context
 }
 

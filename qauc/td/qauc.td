@@ -130,22 +130,6 @@ def Qauc_ReleaseOp : Qauc_Op<"release"> {
   let assemblyFormat = "$input attr-dict `:` type($input)";
 }
 
-def Qauc_LiftedOp : Qauc_Op<"lifted"> {
-  let summary = "opaque application of a lifted (lifetime-preserving) gate";
-  let description = [{
-    Applies the injective classical function named `$gate` (lifted to a
-    quantum isometry, e.g. state prep, X, CX) to `$operands`, producing
-    `$result`. A placeholder: carries the surface-level `[c](x)` information
-    for a later pass to resolve into real gate semantics — this op does not
-    itself define what `$gate` computes.
-  }];
-  let arguments = (ins StrAttr:$gate, Variadic<Qauc_QubitType>:$operands);
-  let results = (outs Qauc_QubitType:$result);
-  let assemblyFormat = [{
-    $gate `(` $operands `)` attr-dict `:` functional-type(operands, results)
-  }];
-}
-
 def Qauc_UncomputeOp : Qauc_Op<"uncompute", [
     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>
 ]> {

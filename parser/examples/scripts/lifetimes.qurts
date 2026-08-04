@@ -9,6 +9,29 @@ fn scoped_lifetime() -> bool {
     true
 }
 
+fn borrow_via_newlft(x : bool) -> bool {
+    newlft 'a;
+    let y = &'a x;
+    endlft 'a;
+    x
+}
+
+fn crossing_borrows(x : bool, y : bool) -> bool {
+    newlft 'a;
+    newlft 'b;
+    let rx = &'a x;
+    let ry = &'b y;
+    endlft 'a;
+    endlft 'b;
+    x
+}
+
+fn double_open_lifetime() -> bool {
+    newlft 'a;
+    newlft 'a;
+    true
+}
+
 fn ordered_lifetimes<'a, 'b, 'a <= 'b>(x : &'a bool, y : &'b bool) -> &'a bool {
     x
 }

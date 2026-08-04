@@ -35,7 +35,7 @@ impl fmt::Display for LowerError {
             LowerError::UndefinedVariable(name) => write!(f, "undefined variable: {name}"),
             LowerError::LifetimeAlreadyOpen(name) => write!(f, "lifetime already open: {name}"),
             LowerError::UnknownLifetime(name) => {
-                write!(f, "endlft on unknown or already-closed lifetime: {name}")
+                write!(f, "unknown or already-closed lifetime: {name}")
             }
             LowerError::Mlir(error) => write!(f, "MLIR error: {error}"),
         }

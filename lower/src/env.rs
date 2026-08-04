@@ -46,4 +46,8 @@ impl<'c> Env<'c> {
     pub fn close_lifetime(&mut self, name: &str) -> Option<StoredValue<'c>> {
         self.lifetimes.remove(name)
     }
+
+    pub fn lifetime(&self, name: &str) -> Option<StoredValue<'c>> {
+        self.lifetimes.get(name).copied()
+    }
 }

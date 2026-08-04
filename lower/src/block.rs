@@ -1,4 +1,4 @@
-use super::{cst_to_qduc, env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
+use super::{cst_to_qauc, cst_to_qduc, env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
 use crate::Lowerer;
 use melior::ir::{Block, Location};
 use parser::Rule;
@@ -49,7 +49,8 @@ fn lower_stmt<'c>(
         }
         Rule::newlft_stmt => {
             let location = Location::unknown(lowerer.context);
-            let name = lifetime_var_name(inner, &text)?;
+            let lifetime_pair = inner.into_inner().next().expect("newlft_stmt has a lifetime");
+            let name = lifetime_var_name(lifetime_pair, &text)?;
             let token = cst_to_qduc::newlft(lowerer.context, mlir_block, location)?;
             if !env.open_lifetime(name.clone(), token) {
                 return Err(LowerError::LifetimeAlreadyOpen(format!("'{name}")));
@@ -58,21 +59,43 @@ fn lower_stmt<'c>(
         }
         Rule::endlft_stmt => {
             let location = Location::unknown(lowerer.context);
-            let name = lifetime_var_name(inner, &text)?;
+            let lifetime_pair = inner.into_inner().next().expect("endlft_stmt has a lifetime");
+            let name = lifetime_var_name(lifetime_pair, &text)?;
             let token = env
                 .close_lifetime(&name)
                 .ok_or_else(|| LowerError::UnknownLifetime(format!("'{name}")))?;
             cst_to_qduc::end(mlir_block, token.as_value(), location)?;
             Ok(())
         }
-        Rule::borrow_stmt => Err(LowerError::UnsupportedStmt(inner.as_rule(), text)),
+        Rule::borrow_stmt => {
+            let location = Location::unknown(lowerer.context);
+            let mut children = inner.into_inner();
+            let new_name = children.next().expect("borrow_stmt has a new ident").as_str().to_string();
+            let lifetime_pair = children.next().expect("borrow_stmt has a lifetime");
+            let source_name = children.next().expect("borrow_stmt has a source ident").as_str().to_string();
+
+            let lifetime_name = lifetime_var_name(lifetime_pair, &text)?;
+            let lifetime = env
+                .lifetime(&lifetime_name)
+                .ok_or_else(|| LowerError::UnknownLifetime(format!("'{lifetime_name}")))?;
+
+            let value = env
+                .lookup(&source_name)
+                .ok_or(LowerError::UndefinedVariable(source_name))?
+                .as_single()
+                .ok_or(LowerError::UnsupportedStmt(Rule::borrow_stmt, text))?;
+
+            let result =
+                cst_to_qauc::borrow(lowerer.context, mlir_block, value, lifetime.as_value(), location)?;
+            env.define(new_name, LoweredValue::single(result));
+            Ok(())
+        }
         rule => unreachable!("unexpected stmt variant {rule:?}"),
     }
 }
 
-/// Rejects `'0`/`'static` as newlft/endlft targets.
-fn lifetime_var_name(stmt_pair: Pair<Rule>, stmt_text: &str) -> Result<String, LowerError> {
-    let lifetime_pair = stmt_pair.into_inner().next().expect("newlft/endlft_stmt has a lifetime");
+/// Rejects `'0`/`'static` as newlft/endlft/borrow_stmt lifetime targets.
+fn lifetime_var_name(lifetime_pair: Pair<Rule>, stmt_text: &str) -> Result<String, LowerError> {
     let variant = lifetime_pair.into_inner().next().expect("lifetime has exactly one variant");
     match variant.as_rule() {
         Rule::lifetime_var => Ok(variant.as_str().to_string()),
@@ -157,12 +180,49 @@ mod tests {
     }
 
     #[test]
-    fn rejects_borrow_stmt() {
+    fn lowers_borrow_stmt() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, module) = lower_top_block(
+            &lowerer,
+            "{ let x : bool = true; newlft 'a; let y = &'a x; endlft 'a; }",
+        );
+        result.unwrap();
+        let text = module.as_operation().to_string();
+        assert!(text.contains("qauc.borrow"), "{text}");
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn rejects_borrow_of_undefined_variable() {
         let context = test_context();
         let signatures = HashMap::new();
         let lowerer = Lowerer { context: &context, signatures: &signatures };
         let (result, _module) =
             lower_top_block(&lowerer, "{ newlft 'a; let y = &'a x; endlft 'a; }");
+        assert!(matches!(result, Err(LowerError::UndefinedVariable(name)) if name == "x"));
+    }
+
+    #[test]
+    fn rejects_borrow_with_unknown_lifetime() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, _module) =
+            lower_top_block(&lowerer, "{ let x : bool = true; let y = &'a x; }");
+        assert!(matches!(result, Err(LowerError::UnknownLifetime(name)) if name == "'a"));
+    }
+
+    #[test]
+    fn rejects_borrow_of_tuple() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer { context: &context, signatures: &signatures };
+        let (result, _module) = lower_top_block(
+            &lowerer,
+            "{ let x : (bool, bool) = (true, false); newlft 'a; let y = &'a x; endlft 'a; }",
+        );
         assert!(matches!(result, Err(LowerError::UnsupportedStmt(Rule::borrow_stmt, _))));
     }
 }
