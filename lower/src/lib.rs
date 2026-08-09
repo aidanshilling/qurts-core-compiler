@@ -1,4 +1,5 @@
 pub mod block;
+pub mod cst_to_mlrd;
 pub mod cst_to_qauc;
 pub mod cst_to_qduc;
 pub mod env;
@@ -48,8 +49,8 @@ pub struct LoweredProgram<'c> {
     pub errors: Vec<(String, LowerError)>,
 }
 
-/// CST -> plain MLIR (`func`/`arith`/`scf`). Lifetimes/ownership are out of scope
-/// (pass 2/3); functions needing them are skipped and recorded in `errors`.
+/// CST -> MLIR. Functions hitting a not-yet-covered construct are skipped and
+/// recorded in `errors` rather than failing the whole program.
 pub fn lower_program<'c>(context: &'c Context, pairs: Pairs<Rule>) -> LoweredProgram<'c> {
     let function_pairs: Vec<_> = pairs
         .filter(|pair| pair.as_rule() == Rule::function)
