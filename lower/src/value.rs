@@ -2,15 +2,6 @@ use melior::ir::{Value, ValueLike};
 use mlir_sys::MlirValue;
 use std::marker::PhantomData;
 
-/// A `Value` stored by its raw handle rather than a borrow-checked reference.
-///
-/// melior ties `Value<'c, 'a>`'s `'a` to the specific `Block` borrow that produced
-/// it, which makes it unusable to store across nested-region boundaries (e.g. a
-/// value from an `if`-branch's temporary block can't flow back into the outer
-/// scope through a shared, single-lifetime `Env`). `MlirValue` is just a non-owning
-/// pointer handle into MLIR's own heap-allocated IR tree, which outlives this
-/// pass regardless of which Rust-local `Block` produced it, so re-deriving a
-/// `Value<'c, 'c>` from the stored handle on demand is sound.
 #[derive(Debug, Clone, Copy)]
 pub struct StoredValue<'c> {
     raw: MlirValue,
@@ -19,7 +10,10 @@ pub struct StoredValue<'c> {
 
 impl<'c> StoredValue<'c> {
     pub fn new(value: impl ValueLike<'c>) -> Self {
-        Self { raw: value.to_raw(), _context: PhantomData }
+        Self {
+            raw: value.to_raw(),
+            _context: PhantomData,
+        }
     }
 
     pub fn as_value(&self) -> Value<'c, 'c> {

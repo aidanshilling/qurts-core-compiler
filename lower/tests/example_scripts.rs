@@ -9,11 +9,6 @@ enum Outcome {
     Rejected,
 }
 
-/// Per-function expected outcome for each bundled example script, per the plan:
-/// classical `func`/`arith`/`scf` constructs (plus flattened tuples), `newlft`/
-/// `endlft` (qduc), `borrow_stmt` (qauc.borrow), and `lifted_expr`/`qif_expr`
-/// (mlrd.lifted/mlrd.qif) lower; `meas`/`unitary` are still rejected (no op
-/// exists for either yet).
 const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
     (
         "basic.qurts",
