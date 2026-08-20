@@ -79,6 +79,59 @@ if(NOT LLVM_ENABLE_RTTI)
 endif()
 
 # ---------------------------------------------------------------------------
+# qduc-opt — mlir-opt-alike registering just qduc (+ func/arith/scf), for
+# lit/FileCheck verifier tests in ../test.
+# ---------------------------------------------------------------------------
+
+add_executable(qduc-opt tools/qduc-opt/qduc-opt.cpp)
+
+target_link_libraries(qduc-opt
+  PRIVATE
+    QducDialect
+    MLIROptLib
+    MLIRFuncDialect
+    MLIRArithDialect
+    MLIRSCFDialect
+)
+
+if(NOT LLVM_ENABLE_EH)
+  target_compile_options(qduc-opt PRIVATE -fno-exceptions)
+endif()
+if(NOT LLVM_ENABLE_RTTI)
+  target_compile_options(qduc-opt PRIVATE -fno-rtti)
+endif()
+
+# ---------------------------------------------------------------------------
+# lit/FileCheck verifier tests (../test) — optional: only wired up if both
+# `lit` and `FileCheck` are found.
+# ---------------------------------------------------------------------------
+
+find_program(LIT_EXECUTABLE NAMES lit llvm-lit)
+find_program(FILECHECK_EXECUTABLE NAMES FileCheck HINTS ${LLVM_TOOLS_BINARY_DIR})
+
+if(LIT_EXECUTABLE AND FILECHECK_EXECUTABLE)
+  set(QDUC_TEST_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../test)
+  set(QDUC_TEST_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/test)
+  # Ninja is a single-config generator (see build instructions in CLAUDE.md),
+  # so the executable lands directly here with no Debug/Release subdirectory.
+  set(QDUC_OPT_EXECUTABLE ${CMAKE_CURRENT_BINARY_DIR}/qduc-opt)
+
+  configure_file(
+    ${QDUC_TEST_SOURCE_DIR}/lit.site.cfg.py.in
+    ${QDUC_TEST_BINARY_DIR}/lit.site.cfg.py
+    @ONLY
+  )
+  add_custom_target(check-qduc
+    COMMAND ${LIT_EXECUTABLE} -v ${QDUC_TEST_BINARY_DIR}
+    DEPENDS qduc-opt
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Running qduc lit/FileCheck verifier tests"
+  )
+else()
+  message(STATUS "qduc: lit and/or FileCheck not found — skipping check-qduc target")
+endif()
+
+# ---------------------------------------------------------------------------
 # compile_commands.json — symlink into source tree so clangd finds it
 # ---------------------------------------------------------------------------
 

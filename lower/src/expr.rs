@@ -1,4 +1,4 @@
-use super::{block::lower_block_body, env::Env, error::LowerError, value::LoweredValue};
+use super::{block::lower_block_body, cst_to_mlrd, env::Env, error::LowerError, value::LoweredValue};
 use crate::Lowerer;
 use melior::{
     dialect::{arith, func, scf},
@@ -62,10 +62,90 @@ pub fn lower_expr<'c>(
             env.pop_scope();
             Ok(result?.unwrap_or(LoweredValue::Tuple(vec![])))
         }
-        Rule::meas_expr | Rule::unitary_expr | Rule::lifted_expr | Rule::qif_expr => {
+        Rule::lifted_expr => lower_lifted(lowerer, env, block, inner, location),
+        Rule::qif_expr => lower_qif(lowerer, env, block, inner, location),
+        Rule::meas_expr | Rule::unitary_expr => {
             Err(LowerError::UnsupportedExpr(inner.as_rule(), text))
         }
         rule => unreachable!("unexpected expr variant {rule:?}"),
+    }
+}
+
+fn lower_lifted<'c>(
+    lowerer: &Lowerer<'c, '_>,
+    env: &mut Env<'c>,
+    block: &Block<'c>,
+    pair: Pair<Rule>,
+    location: Location<'c>,
+) -> Result<LoweredValue<'c>, LowerError> {
+    let text = pair.as_str().to_string();
+    let mut children = pair.into_inner();
+    let gate = children.next().expect("lifted_expr has a gate name").as_str().to_string();
+
+    let mut operands = Vec::new();
+    if let Some(operand_pair) = children.next() {
+        let name = operand_pair.as_str();
+        let value = env
+            .lookup(name)
+            .ok_or_else(|| LowerError::UndefinedVariable(name.to_string()))?
+            .as_single()
+            .ok_or_else(|| LowerError::UnsupportedExpr(Rule::lifted_expr, text.clone()))?;
+        operands.push(value);
+    }
+
+    let result = cst_to_mlrd::lifted(lowerer.context, block, &gate, &operands, location)?;
+    Ok(LoweredValue::single(result))
+}
+
+fn lower_qif<'c>(
+    lowerer: &Lowerer<'c, '_>,
+    env: &mut Env<'c>,
+    block: &Block<'c>,
+    pair: Pair<Rule>,
+    location: Location<'c>,
+) -> Result<LoweredValue<'c>, LowerError> {
+    let text = pair.as_str().to_string();
+    let mut children = pair.into_inner();
+    let condition_name =
+        children.next().expect("qif_expr has a condition ident").as_str().to_string();
+    let then_pair = children.next().expect("qif_expr has a then block");
+    let else_pair = children.next().expect("qif_expr has an else block");
+
+    let condition = env
+        .lookup(&condition_name)
+        .ok_or(LowerError::UndefinedVariable(condition_name))?
+        .as_single()
+        .ok_or_else(|| LowerError::UnsupportedExpr(Rule::qif_expr, text.clone()))?;
+
+    let then_block = Block::new(&[]);
+    env.push_scope();
+    let then_result = lower_block_body(lowerer, env, &then_block, then_pair)?
+        .unwrap_or(LoweredValue::Tuple(vec![]));
+    env.pop_scope();
+    let then_values = then_result.flatten();
+    cst_to_mlrd::r#yield(&then_block, &then_values, location)?;
+    let result_types: Vec<_> = then_values.iter().map(ValueLike::r#type).collect();
+    let then_region = Region::new();
+    then_region.append_block(then_block);
+
+    let else_block = Block::new(&[]);
+    env.push_scope();
+    let else_result = lower_block_body(lowerer, env, &else_block, else_pair)?
+        .unwrap_or(LoweredValue::Tuple(vec![]));
+    env.pop_scope();
+    let else_values = else_result.flatten();
+    cst_to_mlrd::r#yield(&else_block, &else_values, location)?;
+    let else_region = Region::new();
+    else_region.append_block(else_block);
+
+    let results =
+        cst_to_mlrd::qif(block, condition, then_region, else_region, &result_types, location)?;
+    match results.as_slice() {
+        [] => Ok(LoweredValue::Tuple(vec![])),
+        [value] => Ok(LoweredValue::single(*value)),
+        _ => Ok(LoweredValue::Tuple(
+            results.into_iter().map(LoweredValue::single).collect(),
+        )),
     }
 }
 
@@ -176,7 +256,10 @@ fn lower_if<'c>(
 mod tests {
     use super::*;
     use crate::default_context as test_context;
-    use melior::ir::{Module, operation::OperationLike};
+    use melior::ir::{
+        Module, Type,
+        operation::{OperationBuilder, OperationLike},
+    };
     use pest::Parser;
     use std::collections::HashMap;
 
@@ -253,5 +336,53 @@ mod tests {
             result,
             Err(LowerError::UnsupportedExpr(Rule::unitary_expr, _))
         ));
+    }
+
+    #[test]
+    fn lowers_lifted_expr_no_operand() {
+        let context = test_context();
+        let signatures = HashMap::new();
+        let lowerer = Lowerer {
+            context: &context,
+            signatures: &signatures,
+        };
+        let (value, module) = lower_top_expr(&lowerer, "[0]()");
+        assert!(value.as_single().is_some());
+        assert!(module.as_operation().verify());
+    }
+
+    #[test]
+    fn lowers_qif_expr() {
+        let context = test_context();
+        context.set_allow_unregistered_dialects(true);
+        let signatures = HashMap::new();
+        let lowerer = Lowerer {
+            context: &context,
+            signatures: &signatures,
+        };
+        let module = Module::new(Location::unknown(&context));
+        let block = module.body();
+        let location = Location::unknown(&context);
+
+        let ref_type =
+            Type::parse(&context, "!qauc.ref<!qduc.lt, !qauc.qbit>").expect("qauc registered");
+        let op = block.append_operation(
+            OperationBuilder::new("test.ref", location)
+                .add_results(&[ref_type])
+                .build()
+                .expect("valid unregistered test op"),
+        );
+        let condition: Value = op.result(0).expect("test.ref has a result").into();
+
+        let mut env = Env::new();
+        env.define("r", LoweredValue::single(condition));
+
+        let pair = parser::QurtsParser::parse(Rule::expr, "qif r { [1]() } else { [0]() }")
+            .unwrap()
+            .next()
+            .unwrap();
+        let value = lower_expr(&lowerer, &mut env, &block, pair).unwrap();
+        assert!(value.as_single().is_some());
+        assert!(module.as_operation().verify());
     }
 }

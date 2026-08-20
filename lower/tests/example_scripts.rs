@@ -9,12 +9,14 @@ enum Outcome {
     Rejected,
 }
 
-/// Per-function expected outcome for each bundled example script, per the plan:
-/// pass 1 only handles classical `func`/`arith`/`scf` constructs (plus flattened
-/// tuples); anything needing `newlft`/`endlft`/`borrow_stmt` (qduc) or
-/// `meas`/`unitary`/`lifted`/`qif` (qauc/gates) is rejected until later passes.
 const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
-    ("basic.qurts", &[("always_true", Outcome::Lowers), ("choose", Outcome::Lowers)]),
+    (
+        "basic.qurts",
+        &[
+            ("always_true", Outcome::Lowers),
+            ("choose", Outcome::Lowers),
+        ],
+    ),
     (
         "calls_and_tuples.qurts",
         &[
@@ -29,13 +31,22 @@ const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
         "lifetimes.qurts",
         &[
             ("borrow_example", Outcome::Rejected),
-            ("scoped_lifetime", Outcome::Rejected),
+            ("scoped_lifetime", Outcome::Lowers),
+            ("borrow_via_newlft", Outcome::Lowers),
+            ("crossing_borrows", Outcome::Lowers),
+            ("double_open_lifetime", Outcome::Rejected),
             ("ordered_lifetimes", Outcome::Lowers),
         ],
     ),
-    ("qif.qurts", &[("copy_via_qif", Outcome::Rejected)]),
-    ("quantum_gates.qurts", &[("prepare_and_measure", Outcome::Rejected)]),
-    ("uncompute_walkthrough.qurts", &[("example", Outcome::Rejected)]),
+    ("qif.qurts", &[("copy_via_qif", Outcome::Lowers)]),
+    (
+        "quantum_gates.qurts",
+        &[("prepare_and_measure", Outcome::Rejected)],
+    ),
+    (
+        "uncompute_walkthrough.qurts",
+        &[("example", Outcome::Rejected)],
+    ),
 ];
 
 #[test]

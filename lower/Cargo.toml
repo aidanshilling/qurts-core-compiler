@@ -10,3 +10,4 @@ pest = "2.8.6"
 parser = { path = "../parser" }
 qduc = { path = "../qduc" }
 qauc = { path = "../qauc" }
+mlrd = { path = "../mlrd" }

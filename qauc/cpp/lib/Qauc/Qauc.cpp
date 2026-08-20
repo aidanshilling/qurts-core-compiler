@@ -43,3 +43,46 @@ void qauc::UncomputeOp::getEffects(
   effects.emplace_back(mlir::MemoryEffects::Free::get(),
                        qauc::QubitResource::get());
 }
+
+// Read on $lifetime itself (not the resource generally), so effect-aware
+// passes see a same-value conflict with qduc.end's Free and won't reorder
+// this past it — advisory only, the verifier below is the real backstop.
+void qauc::BorrowOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                       &getOperation()->getOpOperand(1),
+                       qduc::LifetimeResource::get());
+}
+
+void qauc::UniqueBorrowOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                       &getOperation()->getOpOperand(1),
+                       qduc::LifetimeResource::get());
+}
+
+// $result inherits $lifetime's obligation: it must not be used after
+// $lifetime's qduc.end, even though that use never shows up in $lifetime's
+// own use-list. If $lifetime doesn't have exactly one qduc.end, that's
+// qduc::NewLftOp::verify()'s diagnostic to give, not ours — skip silently.
+llvm::LogicalResult qauc::BorrowOp::verify() {
+  qduc::EndOp end = qduc::findUniqueEnd(getLifetime());
+  if (!end)
+    return mlir::success();
+  if (!qduc::allUsesPrecede(getResult(), end))
+    return emitOpError("result used after its lifetime's qduc.end");
+  return mlir::success();
+}
+
+llvm::LogicalResult qauc::UniqueBorrowOp::verify() {
+  qduc::EndOp end = qduc::findUniqueEnd(getLifetime());
+  if (!end)
+    return mlir::success();
+  if (!qduc::allUsesPrecede(getResult(), end))
+    return emitOpError("result used after its lifetime's qduc.end");
+  return mlir::success();
+}

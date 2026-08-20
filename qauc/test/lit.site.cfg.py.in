@@ -1,0 +1,6 @@
+config.qauc_test_source_root = "@QAUC_TEST_SOURCE_DIR@"
+config.qauc_test_binary_root = "@QAUC_TEST_BINARY_DIR@"
+config.qauc_opt = "@QAUC_OPT_EXECUTABLE@"
+config.filecheck = "@FILECHECK_EXECUTABLE@"
+
+lit_config.load_config(config, "@QAUC_TEST_SOURCE_DIR@/lit.cfg.py")

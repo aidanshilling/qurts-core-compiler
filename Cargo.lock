@@ -453,6 +453,7 @@ version = "0.1.0"
 dependencies = [
  "melior",
  "mlir-sys",
+ "mlrd",
  "parser",
  "pest",
  "qauc",
@@ -537,6 +538,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55f8c5781dc23ebe7456f9e9aaecab9eee9e542f7e9051b95b0a31b1d5d4b61f"
 dependencies = [
  "bindgen",
+]
+
+[[package]]
+name = "mlrd"
+version = "0.1.0"
+dependencies = [
+ "melior",
+ "mlir-sys",
+ "qauc",
+ "qduc",
 ]
 
 [[package]]
