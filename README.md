@@ -74,6 +74,7 @@ requires LLVM/MLIR 23.1 (`brew install llvm cmake ninja`; the base `mlir-sys` cr
 Beyond that, each dialect has a hand-written C++ implementation generated from its `.td` file, and
 `transforms` has C++ passes plus the mqt-core submodule (`git submodule update --init`), all of
 which must be built with CMake *before* `cargo build`/`cargo test` will link — see
-`CLAUDE.md`'s "Build & test commands" for the exact invocations (Homebrew clang and an explicit
-`CMAKE_OSX_SYSROOT` are required by mqt-core). `cargo build` does not build this C++ side itself;
-it only links against the static libraries CMake produces.
+`transforms/README.md` for the exact invocations (Homebrew clang and an explicit
+`CMAKE_OSX_SYSROOT` are required by mqt-core; the same flags work for `qduc/cpp`, `qauc/cpp` and
+`mlrd/cpp`). `cargo build` does not build this C++ side itself; it only links against the
+static libraries CMake produces.
