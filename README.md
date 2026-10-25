@@ -56,6 +56,7 @@ optimized circuit (MQT handles OpenQASM 3 / QIR export and simulation)
 Gate-level optimization is deliberately not re-implemented here: what stays in this repo is the
 part that needs Qurts' lifetime and ownership structure (when a qubit is dropped, how it is
 uncomputed, how `qif` becomes controlled gates), and everything below that is mqt-core's.
+The reasoning behind this and the other load-bearing choices is in [`DESIGN.md`](DESIGN.md).
 
 ## AI assistance
 
