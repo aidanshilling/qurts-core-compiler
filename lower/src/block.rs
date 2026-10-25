@@ -1,6 +1,6 @@
 use super::{cst_to_qauc, cst_to_qduc, env::Env, error::LowerError, expr::lower_expr, value::LoweredValue};
 use crate::Lowerer;
-use melior::ir::{Block, Location};
+use melior::ir::{Block, Location, ValueLike};
 use parser::Rule;
 use pest::iterators::Pair;
 
@@ -35,11 +35,23 @@ fn lower_stmt<'c>(
     match inner.as_rule() {
         Rule::let_stmt => {
             let mut children = inner.into_inner();
-            let name = children.next().expect("let_stmt has an ident").as_str().to_string();
+            let pattern = children.next().expect("let_stmt has a pattern");
             let _ty = children.next().expect("let_stmt has a ty");
             let expr_pair = children.next().expect("let_stmt has an expr");
             let value = lower_expr(lowerer, env, mlir_block, expr_pair)?;
-            env.define(name, value);
+            bind_pattern(env, pattern, value, &text)
+        }
+        Rule::drop_stmt => {
+            let location = Location::unknown(lowerer.context);
+            let name = inner.into_inner().next().expect("drop_stmt has an ident").as_str();
+            let value = env
+                .lookup(name)
+                .ok_or_else(|| LowerError::UndefinedVariable(name.to_string()))?;
+            for value in value.flatten() {
+                if value.r#type() == cst_to_qauc::qbit_type(lowerer.context)? {
+                    cst_to_qauc::uncompute(mlir_block, value, location)?;
+                }
+            }
             Ok(())
         }
         Rule::expr_stmt => {
@@ -91,6 +103,33 @@ fn lower_stmt<'c>(
             Ok(())
         }
         rule => unreachable!("unexpected stmt variant {rule:?}"),
+    }
+}
+
+fn bind_pattern<'c>(
+    env: &mut Env<'c>,
+    pattern: Pair<Rule>,
+    value: LoweredValue<'c>,
+    stmt_text: &str,
+) -> Result<(), LowerError> {
+    let inner = pattern.into_inner().next().expect("pattern has exactly one variant");
+    match inner.as_rule() {
+        Rule::ident => {
+            env.define(inner.as_str().to_string(), value);
+            Ok(())
+        }
+        Rule::tuple_pattern => {
+            let LoweredValue::Tuple(values) = value else {
+                return Err(LowerError::UnsupportedStmt(Rule::let_stmt, stmt_text.to_string()));
+            };
+            let mut children = inner.into_inner();
+            let [lhs, rhs] = values.as_slice() else {
+                return Err(LowerError::UnsupportedStmt(Rule::let_stmt, stmt_text.to_string()));
+            };
+            bind_pattern(env, children.next().expect("tuple_pattern has two patterns"), lhs.clone(), stmt_text)?;
+            bind_pattern(env, children.next().expect("tuple_pattern has two patterns"), rhs.clone(), stmt_text)
+        }
+        rule => unreachable!("unexpected pattern variant {rule:?}"),
     }
 }
 

@@ -11,14 +11,17 @@ param      = { ident ~ ":" ~ ty }
 
 block = { "{" ~ stmt* ~ expr? ~ "}" }
 
-stmt        = { let_stmt | borrow_stmt | newlft_stmt | endlft_stmt | expr_stmt }
-let_stmt    = { "let" ~ ident ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
+stmt        = { let_stmt | borrow_stmt | newlft_stmt | endlft_stmt | drop_stmt | expr_stmt }
+let_stmt    = { "let" ~ pattern ~ ":" ~ ty ~ "=" ~ expr ~ ";" }
 borrow_stmt = { "let" ~ ident ~ "=" ~ "&" ~ lifetime ~ ident ~ ";" }
 newlft_stmt = { "newlft" ~ lifetime ~ ";" }
 endlft_stmt = { "endlft" ~ lifetime ~ ";" }
+drop_stmt   = { "drop" ~ ident ~ ";" }
 expr_stmt   = { expr ~ ";" }
-// TODO: drop_stmt    - explicit drop: `drop x;`
 // TODO: cast_stmt    - type coercion: `x as #'a qbit;`
+
+pattern       = { tuple_pattern | ident }
+tuple_pattern = { "(" ~ pattern ~ "," ~ pattern ~ ")" }
 
 // Expressions (Fig. 3): all sub-terms should be variables (ANF)
 expr = {
@@ -48,11 +51,12 @@ if_expr    =  { "if" ~ expr ~ block ~ ("else" ~ block)? }
 qif_expr   =  { "qif" ~ ident ~ block ~ "else" ~ block }
 
 meas_expr    =  { "meas" ~ "(" ~ ident ~ ")" }
-unitary_expr =  { ident ~ "(" ~ ident ~ ")" }
-lifted_expr  =  { "[" ~ (ident | qstate_const) ~ "]" ~ "(" ~ ident? ~ ")" }
+unitary_expr =  { gate_name ~ "(" ~ ident ~ ("," ~ ident)* ~ ")" }
+gate_name    = @{ ASCII_ALPHA_UPPER ~ (ASCII_ALPHANUMERIC | "_")* }
+lifted_expr  =  { "[" ~ (ident | qstate_const) ~ "]" ~ "(" ~ (ident ~ ("," ~ ident)*)? ~ ")" }
 qstate_const =  { "0" | "1" }
 
-keyword = @{ ("fn" | "let" | "else" | "if" | "qif" | "true" | "false" | "newlft" | "endlft" | "meas") ~ !(ASCII_ALPHANUMERIC | "_") }
+keyword = @{ ("fn" | "let" | "else" | "if" | "qif" | "true" | "false" | "newlft" | "endlft" | "drop" | "meas") ~ !(ASCII_ALPHANUMERIC | "_") }
 ident   = @{ !keyword ~ ASCII_ALPHA ~ (ASCII_ALPHANUMERIC | "_")* }
 
 // Lifetime: α | ⊥ | ⊤

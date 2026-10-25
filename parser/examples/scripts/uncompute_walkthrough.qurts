@@ -1,4 +1,4 @@
-fn example() -> qbit {
+fn example() -> (qbit, bool) {
     let x0 : qbit = [0]();
     let x1 : qbit = H(x0);
     newlft 'a;
@@ -11,5 +11,6 @@ fn example() -> qbit {
         z
     };
     endlft 'a;
-    y
+    let ret : bool = meas(x1);
+    (y, ret)
 }

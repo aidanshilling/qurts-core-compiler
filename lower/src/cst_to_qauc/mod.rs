@@ -20,6 +20,19 @@ fn parse_type<'c>(context: &'c Context, source: &str) -> Result<Type<'c>, LowerE
     Type::parse(context, source).ok_or_else(|| LowerError::UnsupportedType(source.to_string()))
 }
 
+pub fn uncompute<'c>(
+    block: &Block<'c>,
+    qbit: Value<'c, '_>,
+    location: Location<'c>,
+) -> Result<(), LowerError> {
+    block.append_operation(
+        OperationBuilder::new("qauc.uncompute", location)
+            .add_operands(&[qbit])
+            .build()?,
+    );
+    Ok(())
+}
+
 pub fn borrow<'c>(
     context: &'c Context,
     block: &Block<'c>,

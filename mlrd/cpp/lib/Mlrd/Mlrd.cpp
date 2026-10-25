@@ -27,6 +27,23 @@ extern "C" void mlrd_register_dialect(MlirContext ctx) {
 
 // ----- OP Definitions ------
 
+llvm::LogicalResult mlrd::LiftedOp::verify() {
+  size_t expected = getOperands().empty() ? 1 : getOperands().size();
+  if (getResults().size() != expected)
+    return emitOpError() << "expects " << expected << " result(s), has "
+                         << getResults().size();
+  return mlir::success();
+}
+
+llvm::LogicalResult mlrd::UnitaryOp::verify() {
+  if (getOperands().empty())
+    return emitOpError("expects at least one qubit operand");
+  if (getOperands().size() != getResults().size())
+    return emitOpError() << "has " << getOperands().size() << " operand(s) but "
+                         << getResults().size() << " result(s)";
+  return mlir::success();
+}
+
 static llvm::LogicalResult verifyQifBranch(mlrd::QifOp op, mlir::Region &region,
                                             llvm::StringRef branchName) {
   mlir::Block &block = region.front();
