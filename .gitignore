@@ -1,8 +1,4 @@
 /target
-
-
-# Added by cargo
-#
-# already existing elements were commented out
-
-#/target
+**/cpp/build/
+**/cpp/compile_commands.json
+.cache/

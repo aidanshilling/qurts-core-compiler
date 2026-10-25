@@ -23,7 +23,6 @@ def Mlrd_Dialect : Dialect {
     lifetime tokens and qauc's ownership/obligation bookkeeping.
   }];
   let cppNamespace = "::mlrd";
-  let usePropertiesForAttributes = 0;
 }
 
 class Mlrd_Op<string mnemonic, list<Trait> traits = []>
@@ -33,16 +32,41 @@ def Mlrd_LiftedOp : Mlrd_Op<"lifted"> {
   let summary = "opaque application of a lifted (lifetime-preserving) gate";
   let description = [{
     Applies the injective classical function named `$gate` (lifted to a
-    quantum isometry, e.g. state prep, X, CX) to `$operands`, producing
-    `$result`. A placeholder: carries the surface-level `[c](x)` information
-    for a later pass to resolve into real gate semantics — this op does not
-    itself define what `$gate` computes.
+    quantum isometry, e.g. state prep, X, CX) to `$operands`, producing one
+    result per operand — or a single fresh qubit for the nullary `[0]`/`[1]`.
+    A placeholder: carries the surface-level `[c](x)` information for the
+    mlrd-to-qco conversion to resolve into real gate semantics — this op does
+    not itself define what `$gate` computes.
   }];
   let arguments = (ins StrAttr:$gate, Variadic<Qauc_QubitType>:$operands);
-  let results = (outs Qauc_QubitType:$result);
+  let results = (outs Variadic<Qauc_QubitType>:$results);
   let assemblyFormat = [{
     $gate `(` $operands `)` attr-dict `:` functional-type(operands, results)
   }];
+  let hasVerifier = 1;
+}
+
+def Mlrd_UnitaryOp : Mlrd_Op<"unitary"> {
+  let summary = "application of a named unitary gate to one or more qubits";
+  let description = [{
+    Applies the gate named `$gate` (`H`, `X`, `CX`, ...) to `$operands`,
+    producing one result per operand in the same order. Like `mlrd.lifted`
+    this only carries the surface-level name; the mlrd-to-qco conversion
+    resolves it into real gate semantics.
+  }];
+  let arguments = (ins StrAttr:$gate, Variadic<Qauc_QubitType>:$operands);
+  let results = (outs Variadic<Qauc_QubitType>:$results);
+  let assemblyFormat = [{
+    $gate `(` $operands `)` attr-dict `:` functional-type(operands, results)
+  }];
+  let hasVerifier = 1;
+}
+
+def Mlrd_MeasOp : Mlrd_Op<"meas"> {
+  let summary = "computational-basis measurement, consuming the qubit";
+  let arguments = (ins Qauc_QubitType:$qbit);
+  let results = (outs I1:$result);
+  let assemblyFormat = "$qbit attr-dict `:` type($qbit) `->` type($result)";
 }
 
 def Mlrd_YieldOp : Mlrd_Op<"yield", [Terminator, HasParent<"QifOp">]> {

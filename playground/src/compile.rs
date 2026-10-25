@@ -1,8 +1,13 @@
-use lower::{default_context, lower_program};
-use melior::ir::{
-    block::BlockLike,
-    operation::{OperationLike, OperationRef},
+use lower::lower_program;
+use melior::{
+    Context,
+    ir::{
+        Module,
+        block::BlockLike,
+        operation::{OperationLike, OperationRef},
+    },
 };
+use transforms::{CONTROLLED_CONJUGATION, INFER_DROPS, MQT_OPTIMIZE, TO_QCO, gate_summary, reparse, run_pipeline};
 use parser::{QurtsParser, Rule};
 use pest::Parser;
 use serde::Serialize;
@@ -59,7 +64,7 @@ pub fn compile_source(source: &str) -> Value {
     let cst_stage =
         text_stage("cst", "Parse Tree (CST)", parser::format_parse_tree(cst_pairs));
 
-    let context = default_context();
+    let context = transforms::context();
     let pairs = QurtsParser::parse(Rule::program, source).expect("checked above");
     let result = lower_program(&context, pairs);
 
@@ -95,5 +100,59 @@ pub fn compile_source(source: &str) -> Value {
         content: StageContent::Functions { functions },
     };
 
-    json!({ "ok": true, "stages": [source_stage, cst_stage, pass1_stage] })
+    let mut stages = vec![source_stage, cst_stage, pass1_stage];
+    let mut module = result.module;
+    'pipeline: {
+        for (id, label, pipeline) in [
+            ("drops", "Pass 2: Drop inference (qauc.uncompute)", INFER_DROPS),
+            ("qco", "Pass 3: MQT qco (naive qif lowering)", TO_QCO),
+        ] {
+            let (stage, ok) = pipeline_stage(&context, &mut module, id, label, pipeline);
+            stages.push(stage);
+            if !ok {
+                break 'pipeline;
+            }
+        }
+        let mut naive = reparse(&context, &module);
+        let (stage, _) =
+            pipeline_stage(&context, &mut naive, "mqt-naive", "Pass 4a: naive + mqt-qco-default", MQT_OPTIMIZE);
+        stages.push(stage);
+        let (stage, ok) = pipeline_stage(
+            &context,
+            &mut module,
+            "conjugation",
+            "Pass 4b: Controlled conjugation",
+            CONTROLLED_CONJUGATION,
+        );
+        stages.push(stage);
+        if !ok {
+            break 'pipeline;
+        }
+        let (stage, _) = pipeline_stage(
+            &context,
+            &mut module,
+            "mqt-conjugation",
+            "Pass 5b: conjugation + mqt-qco-default",
+            MQT_OPTIMIZE,
+        );
+        stages.push(stage);
+        stages.push(text_stage(
+            "summary",
+            "Gate counts",
+            format!(
+                "naive + mqt-qco-default:\n{}\n\ncontrolled-conjugation + mqt-qco-default:\n{}",
+                gate_summary(&naive),
+                gate_summary(&module)
+            ),
+        ));
+    }
+
+    json!({ "ok": true, "stages": stages })
+}
+
+fn pipeline_stage(context: &Context, module: &mut Module, id: &str, label: &str, pipeline: &str) -> (Stage, bool) {
+    match run_pipeline(context, module, pipeline) {
+        Ok(()) => (text_stage(id, label, module.as_operation().to_string()), true),
+        Err(error) => (text_stage(id, label, format!("error: {error}")), false),
+    }
 }

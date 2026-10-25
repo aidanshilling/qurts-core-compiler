@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -20,7 +21,7 @@
 namespace qduc {
 struct LifetimeResource
     : public mlir::SideEffects::Resource::Base<LifetimeResource> {
-  llvm::StringRef getName() final { return "LifetimeResource"; }
+  llvm::StringRef getName() const final { return "LifetimeResource"; }
 };
 } // namespace qduc
 

@@ -1,0 +1,38 @@
+fn main() -> bool {
+    let p0 : qbit = [0]();
+    let p : qbit = H(p0);
+    let q0 : qbit = [0]();
+    let q : qbit = H(q0);
+    let t : qbit = [0]();
+    newlft 'a;
+    newlft 'b;
+    let rp = &'a p;
+    let rq = &'b q;
+    let t1 : qbit = qif rp {
+        let a : qbit = [0]();
+        let a1 : qbit = [not](a);
+        newlft 'c;
+        let ra = &'c a1;
+        let t2 : qbit = qif rq {
+            let t3 : qbit = qif ra {
+                let t4 : qbit = [not](t);
+                t4
+            } else {
+                t
+            };
+            t3
+        } else {
+            let t3 : qbit = [not](t);
+            t3
+        };
+        endlft 'c;
+        t2
+    } else {
+        t
+    };
+    endlft 'a;
+    endlft 'b;
+    let bp : bool = meas(p);
+    let bq : bool = meas(q);
+    meas(t1)
+}

@@ -284,6 +284,31 @@ mod tests {
     }
 
     #[test]
+    fn let_tuple_pattern_still_requires_type() {
+        ok("fn f(p : qbit, q : qbit) -> (qbit, qbit) { let (a, b) : (qbit, qbit) = [cnot](p, q); (a, b) }");
+        err("fn f(p : qbit, q : qbit) -> (qbit, qbit) { let (a, b) = [cnot](p, q); (a, b) }");
+    }
+
+    #[test]
+    fn drop_stmt_and_drop_keyword() {
+        ok("fn f() -> bool { let q : qbit = [0](); drop q; true }");
+        err("fn f() -> bool { let drop : bool = true; drop }");
+    }
+
+    #[test]
+    fn expr_unitary_multi_qubit() {
+        ok("fn f(a : qbit, b : qbit) -> (qbit, qbit) { CX(a, b) }");
+    }
+
+    #[test]
+    fn single_ident_arg_disambiguates_by_case() {
+        let gate = QurtsParser::parse(Rule::expr, "H(x)").unwrap().next().unwrap();
+        assert_eq!(gate.into_inner().next().unwrap().as_rule(), Rule::unitary_expr);
+        let call = QurtsParser::parse(Rule::expr, "h(x)").unwrap().next().unwrap();
+        assert_eq!(call.into_inner().next().unwrap().as_rule(), Rule::call_expr);
+    }
+
+    #[test]
     fn newlft_endlft_stmts() {
         ok("fn f() -> bool { newlft 'a; endlft 'a; true }");
     }

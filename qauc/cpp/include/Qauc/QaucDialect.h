@@ -16,7 +16,7 @@
 namespace qauc {
 struct QubitResource
     : public mlir::SideEffects::Resource::Base<QubitResource> {
-  llvm::StringRef getName() final { return "QubitResource"; }
+  llvm::StringRef getName() const final { return "QubitResource"; }
 };
 } // namespace qauc
 

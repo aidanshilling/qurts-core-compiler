@@ -1,0 +1,32 @@
+fn main() -> bool {
+    let x0 : qbit = [0]();
+    let x : qbit = H(x0);
+    let y0 : qbit = [0]();
+    let y : qbit = H(y0);
+    let z : qbit = [0]();
+    newlft 'a;
+    let rx = &'a x;
+    let ry = &'a y;
+    let tmp : qbit = qif rx {
+        qif ry {
+            [1]()
+        } else {
+            [0]()
+        }
+    } else {
+        [0]()
+    };
+    newlft 'b;
+    let rt = &'b tmp;
+    let z1 : qbit = qif rt {
+        [not](z)
+    } else {
+        z
+    };
+    endlft 'b;
+    drop tmp;
+    endlft 'a;
+    let bx : bool = meas(x);
+    let by : bool = meas(y);
+    meas(z1)
+}

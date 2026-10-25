@@ -64,10 +64,47 @@ pub fn lower_expr<'c>(
         }
         Rule::lifted_expr => lower_lifted(lowerer, env, block, inner, location),
         Rule::qif_expr => lower_qif(lowerer, env, block, inner, location),
-        Rule::meas_expr | Rule::unitary_expr => {
-            Err(LowerError::UnsupportedExpr(inner.as_rule(), text))
+        Rule::unitary_expr => lower_unitary(lowerer, env, block, inner, location),
+        Rule::meas_expr => {
+            let name = inner.into_inner().next().expect("meas_expr has an ident").as_str();
+            let qbit = env
+                .lookup(name)
+                .ok_or_else(|| LowerError::UndefinedVariable(name.to_string()))?
+                .as_single()
+                .ok_or_else(|| LowerError::UnsupportedExpr(Rule::meas_expr, text.clone()))?;
+            let result = cst_to_mlrd::meas(lowerer.context, block, qbit, location)?;
+            Ok(LoweredValue::single(result))
         }
         rule => unreachable!("unexpected expr variant {rule:?}"),
+    }
+}
+
+fn lower_unitary<'c>(
+    lowerer: &Lowerer<'c, '_>,
+    env: &mut Env<'c>,
+    block: &Block<'c>,
+    pair: Pair<Rule>,
+    location: Location<'c>,
+) -> Result<LoweredValue<'c>, LowerError> {
+    let text = pair.as_str().to_string();
+    let mut children = pair.into_inner();
+    let gate = children.next().expect("unitary_expr has a gate name").as_str().to_string();
+
+    let mut operands = Vec::new();
+    for operand_pair in children {
+        let name = operand_pair.as_str();
+        let value = env
+            .lookup(name)
+            .ok_or_else(|| LowerError::UndefinedVariable(name.to_string()))?
+            .as_single()
+            .ok_or_else(|| LowerError::UnsupportedExpr(Rule::unitary_expr, text.clone()))?;
+        operands.push(value);
+    }
+
+    let results = cst_to_mlrd::unitary(lowerer.context, block, &gate, &operands, location)?;
+    match results.as_slice() {
+        [value] => Ok(LoweredValue::single(*value)),
+        _ => Ok(LoweredValue::Tuple(results.into_iter().map(LoweredValue::single).collect())),
     }
 }
 
@@ -83,7 +120,7 @@ fn lower_lifted<'c>(
     let gate = children.next().expect("lifted_expr has a gate name").as_str().to_string();
 
     let mut operands = Vec::new();
-    if let Some(operand_pair) = children.next() {
+    for operand_pair in children {
         let name = operand_pair.as_str();
         let value = env
             .lookup(name)
@@ -93,8 +130,11 @@ fn lower_lifted<'c>(
         operands.push(value);
     }
 
-    let result = cst_to_mlrd::lifted(lowerer.context, block, &gate, &operands, location)?;
-    Ok(LoweredValue::single(result))
+    let results = cst_to_mlrd::lifted(lowerer.context, block, &gate, &operands, location)?;
+    match results.as_slice() {
+        [value] => Ok(LoweredValue::single(*value)),
+        _ => Ok(LoweredValue::Tuple(results.into_iter().map(LoweredValue::single).collect())),
+    }
 }
 
 fn lower_qif<'c>(
@@ -315,27 +355,6 @@ mod tests {
         let (value, module) = lower_top_expr(&lowerer, "if true { true } else { false }");
         assert!(value.as_single().is_some());
         assert!(module.as_operation().verify());
-    }
-
-    #[test]
-    fn rejects_unitary_expr() {
-        let context = test_context();
-        let signatures = HashMap::new();
-        let lowerer = Lowerer {
-            context: &context,
-            signatures: &signatures,
-        };
-        let module = Module::new(Location::unknown(&context));
-        let mut env = Env::new();
-        let pair = parser::QurtsParser::parse(Rule::expr, "H(x)")
-            .unwrap()
-            .next()
-            .unwrap();
-        let result = lower_expr(&lowerer, &mut env, &module.body(), pair);
-        assert!(matches!(
-            result,
-            Err(LowerError::UnsupportedExpr(Rule::unitary_expr, _))
-        ));
     }
 
     #[test]

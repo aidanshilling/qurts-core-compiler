@@ -1,0 +1,13 @@
+[package]
+name = "transforms"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+melior = "0.28.2"
+mlir-sys = "230.0.2"
+lower = { path = "../lower" }
+
+[dev-dependencies]
+parser = { path = "../parser" }
+pest = "2.8.6"

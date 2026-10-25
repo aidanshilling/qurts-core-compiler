@@ -41,12 +41,16 @@ const EXPECTATIONS: &[(&str, &[(&str, Outcome)])] = &[
     ("qif.qurts", &[("copy_via_qif", Outcome::Lowers)]),
     (
         "quantum_gates.qurts",
-        &[("prepare_and_measure", Outcome::Rejected)],
+        &[("prepare_and_measure", Outcome::Lowers)],
     ),
     (
         "uncompute_walkthrough.qurts",
-        &[("example", Outcome::Rejected)],
+        &[("example", Outcome::Lowers)],
     ),
+    ("toy_example.qurts", &[("main", Outcome::Lowers)]),
+    ("qif_ancilla.qurts", &[("main", Outcome::Lowers)]),
+    ("nested_qif.qurts", &[("main", Outcome::Lowers)]),
+    ("lifted_and.qurts", &[("main", Outcome::Lowers)]),
 ];
 
 #[test]
