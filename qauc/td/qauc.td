@@ -22,7 +22,6 @@ def Qauc_Dialect : Dialect {
   }];
   let cppNamespace = "::qauc";
   let useDefaultTypePrinterParser = 1;
-  let usePropertiesForAttributes = 0;
 }
 
 class Qauc_Type<string name, string mnemonic_>
