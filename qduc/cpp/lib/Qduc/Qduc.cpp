@@ -73,9 +73,8 @@ bool qduc::allUsesPrecede(mlir::Value value, mlir::Operation *end) {
     mlir::Operation *owner = use.getOwner();
     if (owner == end)
       continue;
-    if (owner->getBlock() != end->getBlock())
-      return false;
-    if (!owner->isBeforeInBlock(end))
+    mlir::Operation *ancestor = end->getBlock()->findAncestorOpInBlock(*owner);
+    if (!ancestor || !ancestor->isBeforeInBlock(end))
       return false;
   }
   return true;
