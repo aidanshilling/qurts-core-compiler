@@ -25,11 +25,15 @@ fn foo<'a, 'b, 'a <= 'b>(x: #'a qbit, y: &'b bool) -> ()
 
 ## Workspace crates
 
-| Crate    | Description |
-|----------|-------------|
-| `parser` | PEG grammar and parse tree via pest |
-| `qduc`   | MLIR dialect for the lifetime/region constraint system |
-| `qauc`   | MLIR dialect for quantum sub-structural ownership types |
+| Crate        | Description |
+|--------------|-------------|
+| `parser`     | PEG grammar and parse tree via pest |
+| `qduc`       | MLIR dialect for the lifetime/region constraint system |
+| `qauc`       | MLIR dialect for quantum sub-structural ownership types |
+| `mlrd`       | MLIR dialect for the operations a program performs: lifted/unitary gates, `qif`, `meas` |
+| `lower`      | parse tree → qduc/qauc/mlrd MLIR |
+| `transforms` | drop inference, lowering to [mqt-core](https://github.com/munich-quantum-toolkit/core)'s `qco` gate dialect, and the controlled-conjugation optimization; DD-simulation equivalence checks |
+| `playground` | local web UI showing every stage side by side |
 
 ## Compilation pipeline
 
@@ -39,12 +43,19 @@ qurts source
     ▼  parser
 parse tree (pest)
     │
-    ▼  (AST lowering — TODO)
-qduc + qauc MLIR dialects
+    ▼  lower
+qduc + qauc + mlrd MLIR dialects
     │
-    ▼  (uncomputation lowering pass — TODO)
-target quantum circuit dialect (e.g. Catalyst, QIR)
+    ▼  transforms: qurts-infer-drops, convert-mlrd-to-qco
+qco (mqt-core's value-semantics gate dialect)
+    │
+    ▼  transforms: qurts-controlled-conjugation, then MQT's own passes/exports
+optimized circuit (MQT handles OpenQASM 3 / QIR export and simulation)
 ```
+
+Gate-level optimization is deliberately not re-implemented here: what stays in this repo is the
+part that needs Qurts' lifetime and ownership structure (when a qubit is dropped, how it is
+uncomputed, how `qif` becomes controlled gates), and everything below that is mqt-core's.
 
 ## AI assistance
 
@@ -56,11 +67,13 @@ with the University of Edinburgh's current [generative AI policy & assement regu
 
 The `parser` crate has no system dependencies.
 
-The `qduc` and `qauc` crates depend on [melior](https://github.com/raviqqe/melior) (Rust MLIR
-bindings) and require MLIR to be installed (`brew install llvm cmake ninja`; the base `mlir-sys`
-crate locates it via `llvm-config` on `PATH` or an `MLIR_SYS_220_PREFIX` env var).
+Everything else depends on [melior](https://github.com/raviqqe/melior) (Rust MLIR bindings) and
+requires LLVM/MLIR 23.1 (`brew install llvm cmake ninja`; the base `mlir-sys` crate locates it via
+`llvm-config` on `PATH` or an `MLIR_SYS_230_PREFIX` env var).
 
-Beyond that, each dialect also has a hand-written C++ implementation generated from its
-`.td` file, which must be built with CMake *before* `cargo build`/`cargo test` will link —
-see `qduc/cpp/README.md` and `qauc/cpp/README.md` for the exact commands. `cargo build` does
-not build this C++ side itself; it only links against the static libraries CMake produces.
+Beyond that, each dialect has a hand-written C++ implementation generated from its `.td` file, and
+`transforms` has C++ passes plus the mqt-core submodule (`git submodule update --init`), all of
+which must be built with CMake *before* `cargo build`/`cargo test` will link — see
+`CLAUDE.md`'s "Build & test commands" for the exact invocations (Homebrew clang and an explicit
+`CMAKE_OSX_SYSROOT` are required by mqt-core). `cargo build` does not build this C++ side itself;
+it only links against the static libraries CMake produces.
